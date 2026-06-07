@@ -19,8 +19,6 @@ let issuesLoading = false;
 let currentWizardStep = 1;
 let selectionPanelJobId = "";
 let selectionPanelCandidatesKey = "";
-let authReady = false;
-let authInitialized = false;
 
 const MARKDOWN_TOC_WIDTH_KEY = "markdownTocWidth";
 const MARKDOWN_TOC_DEFAULT_WIDTH = 240;
@@ -179,11 +177,6 @@ const productSelectionBackdrop = $("#productSelectionBackdrop");
 const candidateProductList = $("#candidateProductList");
 const manualProductAdd = $("#manualProductAdd");
 const submitProductSelectionBtn = $("#submitProductSelectionBtn");
-const authOverlay = $("#authOverlay");
-const authForm = $("#authForm");
-const authPassword = $("#authPassword");
-const authSubmitBtn = $("#authSubmitBtn");
-const authStatus = $("#authStatus");
 
 startBtn.addEventListener("click", startJob);
 refreshBtn.addEventListener("click", handleRefresh);
@@ -226,7 +219,6 @@ closeEvidenceDrawerBtn?.addEventListener("click", closeEvidenceDrawer);
 closeSourceReportDrawerBtn?.addEventListener("click", closeSourceReportDrawer);
 reportSideBackdrop?.addEventListener("click", closeReportSidePanel);
 submitProductSelectionBtn?.addEventListener("click", submitProductSelection);
-authForm?.addEventListener("submit", handleAuthSubmit);
 reportSelect.addEventListener("change", () => {
   if (reportSelect.value) loadReport(reportSelect.value);
 });
@@ -244,16 +236,15 @@ for (const button of navButtons) {
   button.addEventListener("click", () => showPage(button.dataset.page));
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
   loadSettings();
+  refresh();
   updateQualityPreview();
   showWizardStep(1);
-  await initializeAuth();
+  initKeyboardShortcuts();
 });
 
 function initKeyboardShortcuts() {
-  if (authInitialized) return;
-  authInitialized = true;
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && agentLogModal?.classList.contains("open")) {
       event.preventDefault();
@@ -1518,81 +1509,6 @@ async function handleEvidenceLinkClick(event) {
   });
 }
 
-async function initializeAuth() {
-  setAuthMessage("正在检查登录状态...");
-  try {
-    const status = await authApi("/api/auth/status");
-    if (status.authenticated) {
-      await enterAuthenticatedApp();
-      return;
-    }
-  } catch (error) {
-    setAuthMessage("无法连接后端：" + error.message, "error");
-    showAuthOverlay();
-    return;
-  }
-  showAuthOverlay();
-}
-
-async function handleAuthSubmit(event) {
-  event.preventDefault();
-  const password = authPassword?.value || "";
-  if (!password.trim()) {
-    authPassword?.focus();
-    setAuthMessage("请输入访问密码。", "error");
-    return;
-  }
-  authSubmitBtn.disabled = true;
-  setAuthMessage("正在校验密码...");
-  try {
-    const result = await authApi("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ password }),
-    });
-    if (!result.authenticated) throw new Error("登录状态异常");
-    authPassword.value = "";
-    await enterAuthenticatedApp();
-  } catch (error) {
-    setAuthMessage("密码错误或登录失败：" + error.message, "error");
-    authPassword?.focus();
-  } finally {
-    authSubmitBtn.disabled = false;
-  }
-}
-
-async function enterAuthenticatedApp() {
-  authReady = true;
-  hideAuthOverlay();
-  initKeyboardShortcuts();
-  await refresh();
-}
-
-function showAuthOverlay(message = "") {
-  authReady = false;
-  document.body.classList.add("auth-pending");
-  authOverlay?.removeAttribute("hidden");
-  if (message) setAuthMessage(message, "error");
-  setTimeout(() => authPassword?.focus(), 0);
-}
-
-function hideAuthOverlay() {
-  document.body.classList.remove("auth-pending");
-  authOverlay?.setAttribute("hidden", "hidden");
-  setAuthMessage("");
-}
-
-function setAuthMessage(message, type = "info") {
-  if (!authStatus) return;
-  authStatus.textContent = message || "";
-  authStatus.dataset.type = type;
-}
-
-function handleAuthRequired() {
-  clearTimeout(pollTimer);
-  setStartButtonLoading(false);
-  showAuthOverlay("登录已过期，请重新输入密码。");
-}
-
 async function openEvidenceDrawer({ evidenceId, reportName, href = "" }) {
   if (!evidenceDrawer || !evidenceDrawerContent) return;
   const normalizedEvidenceId = String(evidenceId || "").trim();
@@ -1728,11 +1644,12 @@ async function handleLocalReportLinkClick(event) {
 async function openSourceReportDrawer(rawPath) {
   if (!sourceReportDrawer || !sourceReportDrawerContent) return;
   const reportName = normalizeLocalReportName(rawPath);
+  const reportDisplayPath = displayLocalReportPath(rawPath);
   positionSourceReportDrawer();
   sourceReportDrawer.classList.add("open");
   sourceReportDrawer.setAttribute("aria-hidden", "false");
   if (sourceReportDrawerTitle) sourceReportDrawerTitle.textContent = "加载中...";
-  if (sourceReportDrawerPath) sourceReportDrawerPath.textContent = reportName || rawPath || "未识别来源路径";
+  if (sourceReportDrawerPath) sourceReportDrawerPath.textContent = reportDisplayPath || rawPath || "未识别来源路径";
   if (sourceReportDrawerMeta) sourceReportDrawerMeta.innerHTML = "";
   sourceReportDrawerContent.innerHTML = `
     <div class="skeleton-container">
@@ -1752,7 +1669,7 @@ async function openSourceReportDrawer(rawPath) {
     const data = await api(`/api/reports/${encodeURIComponent(reportName)}`);
     const summary = data.summary || {};
     if (sourceReportDrawerTitle) sourceReportDrawerTitle.textContent = summary.title || data.name || reportName;
-    if (sourceReportDrawerPath) sourceReportDrawerPath.textContent = data.name || reportName;
+    if (sourceReportDrawerPath) sourceReportDrawerPath.textContent = displayLocalReportPath(data.name || reportName) || data.name || reportName;
     if (sourceReportDrawerMeta) sourceReportDrawerMeta.innerHTML = renderSideSummaryHtml(data);
     sourceReportDrawerContent.dataset.reportName = data.name || reportName;
     sourceReportDrawerContent.innerHTML = renderMarkdownPreview(data.content || "", {
@@ -1796,6 +1713,11 @@ function normalizeLocalReportName(rawPath) {
   if (mdIndex >= 0) value = value.slice(0, mdIndex + 3);
   if (!value.toLowerCase().endsWith(".md")) return "";
   return value;
+}
+
+function displayLocalReportPath(rawPath) {
+  const reportName = normalizeLocalReportName(rawPath);
+  return reportName ? `reports/${reportName}` : String(rawPath || "").trim();
 }
 
 function decodeHtmlEntities(value) {
@@ -2423,38 +2345,12 @@ function formatTimestamp(value) {
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
+    headers: { "Content-Type": "application/json" },
     ...options,
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
   });
-  const data = await readJsonResponse(response);
-  if (response.status === 401) {
-    handleAuthRequired();
-    throw new Error(data.error || "authentication required");
-  }
+  const data = await response.json();
   if (!response.ok) throw new Error(data.error || response.statusText);
   return data;
-}
-
-async function authApi(path, options = {}) {
-  const response = await fetch(path, {
-    ...options,
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-  });
-  const data = await readJsonResponse(response);
-  if (!response.ok) throw new Error(data.error || response.statusText);
-  return data;
-}
-
-async function readJsonResponse(response) {
-  const text = await response.text();
-  if (!text) return {};
-  try {
-    return JSON.parse(text);
-  } catch {
-    return { error: text || response.statusText };
-  }
 }
 
 function renderMarkdownPreview(markdown, options = {}) {
@@ -2730,14 +2626,15 @@ function autoLinkEvidenceIds(html) {
 
 function autoLinkLocalReportPaths(html) {
   const parts = String(html || "").split(/(<a\b[^>]*>.*?<\/a>|<code\b[^>]*>.*?<\/code>)/gi);
-  const pattern = /(?:[A-Za-z]:[\\/][^\s<>"']+?\.md|(?:reports|\.\/reports)\/[^\s<>"']+?\.md)/gi;
+  const pattern = /(?:[A-Za-z]:[\\/][^<>"'，。；;）)\]}]+?\.md|(?:reports|\.\/reports)[\\/][^<>"'，。；;）)\]}]+?\.md)/gi;
   return parts
     .map((part) => {
       if (/^<(a|code)\b/i.test(part)) return part;
       return part.replace(pattern, (pathText) => {
         const reportName = normalizeLocalReportName(pathText);
         if (!reportName) return pathText;
-        return `<button class="local-report-link" type="button" data-local-report-path="${escapeHtml(pathText)}">${pathText}</button>`;
+        const label = displayLocalReportPath(pathText);
+        return `<button class="local-report-link" type="button" data-local-report-path="${escapeHtml(pathText)}">${escapeHtml(label)}</button>`;
       });
     })
     .join("");
