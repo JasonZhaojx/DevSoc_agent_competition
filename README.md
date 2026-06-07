@@ -25,13 +25,6 @@ Competitor AI 是一个面向产品经理、市场分析和研发决策场景的
 - Playwright Chromium 浏览器依赖
 - Python 依赖见 [requirements.txt](requirements.txt)
 
-如需本地 Python 方式运行，推荐环境：
-
-- Windows 10/11
-- Python 3.10 或更高版本，推荐 Python 3.11
-- pip、venv
-- 可访问大模型和搜索服务的网络环境
-
 核心 Python 包包括：
 
 ```text
@@ -109,28 +102,11 @@ HTTPS_PROXY=
 ALL_PROXY=
 ```
 
-兼容变量：
-
-```powershell
-# PowerShell 示例
-$env:LLM_PROVIDER="0"
-$env:LLM0_API_KEY="your-ark-api-key"
-$env:LLM0_BASE_URL="https://ark.cn-beijing.volces.com/api/v3"
-$env:LLM0_MODEL="your-model"
-
-# 搜索配置，按实际使用的搜索源填写
-$env:BOCHA_API_KEY="your-bocha-api-key"
-$env:GOOGLE_API_KEY="your-google-api-key"
-$env:GOOGLE_CX_ID="your-google-cx-id"
-```
-
 `ARK_API_KEY`、`LLM_API_KEY`、`MIMO_API_KEY` 可作为兼容写法使用，但推荐优先使用 `LLM0_API_KEY`、`LLM1_API_KEY`、`LLM2_API_KEY`。
 
 也可以运行项目后在 Web 控制台的配置页填写运行参数。
 
 ## 安装步骤
-
-### Docker 安装
 
 首次启动会自动构建镜像、安装 Python 依赖，并安装 Playwright Chromium：
 
@@ -144,55 +120,7 @@ docker compose build
 docker compose build --no-cache
 ```
 
-### 本地 Python 安装
-
-进入项目根目录：
-
-```powershell
-cd E:\deep-learning\zhengce\bytedance-ai-competition-workflow_v4
-```
-
-推荐使用启动菜单安装环境：
-
-```bat
-start_competitor_ai.bat
-```
-
-菜单中选择：
-
-```text
-[1] 安装/更新 Python 环境
-```
-
-安装向导会自动搜索本机 Python 解释器。推荐安装流程：
-
-1. 在解释器列表里优先选择 conda / Anaconda / Miniconda 的 `python.exe`，例如 `E:\anaconda\python.exe`。
-2. 询问是否创建或复用独立虚拟环境时，选择 `Y`，建议让脚本创建项目自己的 `.venv`。
-3. 后续安装依赖、初始化 Playwright、初始化 Crawl4AI 等确认项，直接一路按回车或输入 `Y` 即可。
-
-安装成功后会写入：
-```text
-.local_env.bat
-.local_python_path.txt
-```
-
-也可以直接运行安装脚本：
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\install_project_env.ps1
-```
-
-如果已经有装好依赖的 Python 环境，可以运行 `start_competitor_ai.bat` 后选择：
-
-```text
-[3] 使用我已经装好环境的 Python
-```
-
-然后填写 `python.exe` 完整路径，或填写系统命令名 `python`、`python3`、`py`。
-
 ## 启动步骤
-
-### Docker 启动
 
 在仓库根目录执行：
 
@@ -230,38 +158,6 @@ docker compose down
 - `./reports:/app/reports`
 - `./questionnaires:/app/questionnaires`
 
-### 本地 Python 启动
-
-Windows 推荐启动方式：
-
-```bat
-start_competitor_ai.bat
-```
-
-菜单中选择：
-
-```text
-[2] 使用本地 Python 启动 Web 服务器
-```
-
-默认端口为 `8000`，启动后访问：
-
-```text
-http://127.0.0.1:8000
-```
-
-直接启动后端也可以：
-
-```powershell
-python backend\server.py 8000
-```
-
-如果你已经通过安装脚本保存了本地 Python 路径，也可以使用 `.local_python_path.txt` 中记录的解释器运行：
-
-```powershell
-E:\anaconda\python.exe backend\server.py 8000
-```
-
 Web 控制台主要页面包括：
 
 - 工作台：创建竞品分析任务，配置搜索、模型、质检和已有材料。
@@ -270,38 +166,6 @@ Web 控制台主要页面包括：
 - 报告 Skill：构建和查看由报告沉淀出的 Skill Wiki。
 - 质检 Issue：查看 Quality Agent 发现的问题。
 - 配置：填写模型、搜索和流程参数。
-
-## 常用命令（我们还是推荐使用gui版本）
-
-从命令行直接运行完整竞品分析流程：
-
-```powershell
-python run_similar_product_reports_with_new_analyze_quality.py "AI IDE 的国产替代品竞品分析"
-```
-
-从已有报告目录重新运行 Report Agent：
-
-```powershell
-python run_similar_product_reports_with_new_analyze_quality.py --run-mode 1 --report-agent-from-dir reports\20260605_184039 --report-agent-product-description "AI IDE 的国产替代品竞品分析"
-```
-
-生成并分析问卷：
-
-```powershell
-python generate_competitor_questionnaire.py
-```
-
-分析已有问卷和回答文件：
-
-```powershell
-python analyze_questionnaire_results.py questionnaires\xxx.jsonl questionnaires\xxx_responses.jsonl "产品或竞品方向"
-```
-
-运行单个报告质检：
-
-```powershell
-python -m agent.quality_agent.cli reports\your_report.md --save
-```
 
 ## 目录结构
 
@@ -317,9 +181,6 @@ python -m agent.quality_agent.cli reports\your_report.md --save
 | [questionnaires/](questionnaires/) | 问卷 JSONL、模拟回答 CSV/JSONL、问卷分析报告。 |
 | [reports/](reports/) | 运行生成的单品报告、综合报告、质检结果和 Skill Wiki。 |
 | [logs/](logs/) | 运行日志和 Quality Agent 追踪记录。 |
-| [install_project_env.ps1](install_project_env.ps1) | Python 环境安装向导。 |
-| [start_competitor_ai.bat](start_competitor_ai.bat) | Windows 启动菜单入口。 |
-| [start_competitor_ai.ps1](start_competitor_ai.ps1) | 启动菜单的 PowerShell 实现。 |
 | [run_similar_product_reports.py](run_similar_product_reports.py) | 早期竞品报告主流程。 |
 | [run_similar_product_reports_with_new_analyze.py](run_similar_product_reports_with_new_analyze.py) | 新版分析流程。 |
 | [run_similar_product_reports_with_new_analyze_quality.py](run_similar_product_reports_with_new_analyze_quality.py) | 带 Report Agent 和 Quality Agent 的主流程。 |
@@ -342,7 +203,7 @@ python -m agent.quality_agent.cli reports\your_report.md --save
 
 ## 注意事项
 
-- 首次使用 Playwright 或 Crawl4AI 时需要初始化浏览器依赖，安装脚本会询问是否执行。
+- 首次构建 Docker 镜像时会安装 Python 依赖和 Playwright Chromium 浏览器依赖。
 - 如果抓取动态网页失败，可以在 Web 控制台或环境变量中切换抓取后端。
 - 运行完整竞品分析会调用大模型和搜索服务，请确认 API Key、额度和网络可用。
 - 报告、日志、问卷结果属于运行产物，默认不会提交到 Git。
