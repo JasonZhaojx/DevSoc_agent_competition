@@ -1,0 +1,12 @@
+requests
+openai
+duckduckgo-search
+trafilatura
+beautifulsoup4
+lxml
+playwright
+crawl4ai
+python-dotenv
+tqdm
+pydantic
+python-dateutil

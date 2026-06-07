@@ -1,0 +1,55 @@
+services:
+  competitor-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: competitor-ai
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+    environment:
+      WEB_HOST: 0.0.0.0
+      WEB_PORT: 8000
+      LLM_PROVIDER: "${LLM_PROVIDER:-0}"
+      LLM0_API_KEY: "${LLM0_API_KEY:-}"
+      LLM0_BASE_URL: "${LLM0_BASE_URL:-https://ark.cn-beijing.volces.com/api/v3}"
+      LLM0_MODEL: "${LLM0_MODEL:-ep-20260514111325-xjmj7}"
+      LLM1_API_KEY: "${LLM1_API_KEY:-}"
+      LLM1_BASE_URL: "${LLM1_BASE_URL:-https://api.siliconflow.cn/v1/chat/completions}"
+      LLM1_MODEL: "${LLM1_MODEL:-deepseek-ai/DeepSeek-V4-Flash}"
+      LLM2_API_KEY: "${LLM2_API_KEY:-}"
+      LLM2_BASE_URL: "${LLM2_BASE_URL:-https://token-plan-cn.xiaomimimo.com/v1}"
+      LLM2_MODEL: "${LLM2_MODEL:-mimo-v2.5-pro}"
+      LLM_API_KEY: "${LLM_API_KEY:-}"
+      LLM_API_KEYS: "${LLM_API_KEYS:-}"
+      LLM_BASE_URL: "${LLM_BASE_URL:-}"
+      LLM_MODEL: "${LLM_MODEL:-}"
+      REPORT_LLM_API_KEY: "${REPORT_LLM_API_KEY:-}"
+      REPORT_LLM_BASE_URL: "${REPORT_LLM_BASE_URL:-}"
+      REPORT_LLM_MODEL: "${REPORT_LLM_MODEL:-}"
+      ARK_API_KEY: "${ARK_API_KEY:-}"
+      MIMO_API_KEY: "${MIMO_API_KEY:-}"
+      SEARCH_SOURCE: "${SEARCH_SOURCE:-bocha}"
+      SEARCH_BACKEND: "${SEARCH_BACKEND:-1}"
+      BOCHA_API_KEY: "${BOCHA_API_KEY:-}"
+      GOOGLE_API_KEY: "${GOOGLE_API_KEY:-}"
+      GOOGLE_CX_ID: "${GOOGLE_CX_ID:-}"
+      USE_NETWORK_PROXY: "${USE_NETWORK_PROXY:-0}"
+      HTTP_PROXY: "${HTTP_PROXY:-}"
+      HTTPS_PROXY: "${HTTPS_PROXY:-}"
+      ALL_PROXY: "${ALL_PROXY:-}"
+    volumes:
+      - ./reports:/app/reports
+      - ./questionnaires:/app/questionnaires
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/jobs', timeout=5).read()",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

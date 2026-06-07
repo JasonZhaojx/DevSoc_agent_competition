@@ -1,0 +1,15 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.DS_Store
+.env
+.env.*
+.local_env.bat
+.local_python_path.txt
+reports
+node_modules

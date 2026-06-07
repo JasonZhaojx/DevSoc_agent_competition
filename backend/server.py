@@ -46,37 +46,38 @@ LEGACY_SKILL_WIKI_DIR = REPORT_DIR / "skill_wiki"
 QUESTIONNAIRE_DIR = ROOT / "questionnaires"
 RUNNER = ROOT / "run_similar_product_reports_with_new_analyze_quality.py"
 DEFAULT_PORT = int(os.getenv("WEB_PORT", "8000"))
+DEFAULT_HOST = os.getenv("WEB_HOST", "127.0.0.1")
 DEFAULT_LLM_PROVIDER = os.getenv("LLM_PROVIDER", "0")
 
 # Optional local defaults for this web server. Keep these empty in shared code.
 # You can fill them on your own machine, or set the matching environment variables.
-LOCAL_ARK_API_KEY = "ARK_API_KEY_REDACTED"
-LOCAL_ARK_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
-LOCAL_ARK_MODEL = "ep-20260514111325-xjmj7"
-LOCAL_BOCHA_API_KEY = ""#填写在这（博查）
+LOCAL_ARK_API_KEY = ""
+LOCAL_ARK_BASE_URL = ""
+LOCAL_ARK_MODEL = ""
+LOCAL_BOCHA_API_KEY = ""  # 填写在这（博查）
 LOCAL_GOOGLE_API_KEY = ""
 LOCAL_GOOGLE_CX_ID = ""
 
 DEFAULT_ARK_API_KEY = (
-    LOCAL_ARK_API_KEY
-    or os.getenv("REPORT_LLM_API_KEY")
+    os.getenv("REPORT_LLM_API_KEY")
     or os.getenv("LLM0_API_KEY")
     or os.getenv("ARK_API_KEY")
     or os.getenv("LLM_API_KEY")
+    or LOCAL_ARK_API_KEY
     or ""
 )
 DEFAULT_ARK_BASE_URL = (
-    LOCAL_ARK_BASE_URL
-    or os.getenv("REPORT_LLM_BASE_URL")
+    os.getenv("REPORT_LLM_BASE_URL")
     or os.getenv("LLM0_BASE_URL")
     or os.getenv("LLM_BASE_URL")
+    or LOCAL_ARK_BASE_URL
     or "https://ark.cn-beijing.volces.com/api/v3"
 )
 DEFAULT_ARK_MODEL = (
-    LOCAL_ARK_MODEL
-    or os.getenv("REPORT_LLM_MODEL")
+    os.getenv("REPORT_LLM_MODEL")
     or os.getenv("LLM0_MODEL")
     or os.getenv("LLM_MODEL")
+    or LOCAL_ARK_MODEL
     or "ep-20260514111325-xjmj7"
 )
 DEFAULT_BOCHA_API_KEY = LOCAL_BOCHA_API_KEY or os.getenv("BOCHA_API_KEY", "")
@@ -2373,8 +2374,10 @@ def content_type(path: Path) -> str:
 
 def main() -> None:
     port = int(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_PORT
-    server = ThreadingHTTPServer(("127.0.0.1", port), AppHandler)
-    print(f"Web console: http://127.0.0.1:{port}")
+    host = os.getenv("WEB_HOST", DEFAULT_HOST)
+    server = ThreadingHTTPServer((host, port), AppHandler)
+    display_host = "127.0.0.1" if host in {"0.0.0.0", "::"} else host
+    print(f"Web console: http://{display_host}:{port}")
     server.serve_forever()
 
 

@@ -13,14 +13,26 @@ Competitor AI 是一个面向产品经理、市场分析和研发决策场景的
 
 ## 依赖环境
 
-推荐环境：
+推荐使用 Docker 启动，宿主机只需要：
+
+- Docker Desktop 或 Docker Engine
+- Docker Compose v2，命令为 `docker compose`
+- 可访问大模型和搜索服务的网络环境
+
+容器内运行环境：
+
+- Python 3.11
+- Playwright Chromium 浏览器依赖
+- Python 依赖见 [requirements.txt](requirements.txt)
+
+如需本地 Python 方式运行，推荐环境：
 
 - Windows 10/11
-- Python 3.10 或更高版本
+- Python 3.10 或更高版本，推荐 Python 3.11
 - pip、venv
 - 可访问大模型和搜索服务的网络环境
 
-核心 Python 包由安装脚本自动安装，主要包括：
+核心 Python 包包括：
 
 ```text
 requests
@@ -48,10 +60,59 @@ mypy
 langchain-openai
 ```
 
-常用环境变量：
+## 环境变量
+
+推荐在仓库根目录创建 `.env` 文件，Docker Compose 会读取该文件并注入到容器。至少需要配置当前大模型供应商对应的 API Key，以及搜索服务 Key。
+
+常用 `.env` 示例：
+
+```env
+# Web 服务
+WEB_PORT=8000
+
+# 大模型供应商：0 = 豆包/火山 Ark，1 = SiliconFlow，2 = 小米 MiMo
+LLM_PROVIDER=0
+
+# 供应商 0：豆包/火山 Ark
+LLM0_API_KEY=your-ark-api-key
+LLM0_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
+LLM0_MODEL=your-ark-model
+
+# 供应商 1：SiliconFlow 或其他 OpenAI 兼容服务
+LLM1_API_KEY=your-provider1-api-key
+LLM1_BASE_URL=https://api.siliconflow.cn/v1/chat/completions
+LLM1_MODEL=deepseek-ai/DeepSeek-V4-Flash
+
+# 供应商 2：小米 MiMo
+LLM2_API_KEY=your-mimo-api-key
+LLM2_BASE_URL=https://token-plan-cn.xiaomimimo.com/v1
+LLM2_MODEL=mimo-v2.5-pro
+
+# Report Agent 可单独覆盖模型；留空则跟随上面的 LLM_PROVIDER 配置
+REPORT_LLM_API_KEY=
+REPORT_LLM_BASE_URL=
+REPORT_LLM_MODEL=
+
+# 搜索配置：bocha / google / duckduckgo
+SEARCH_SOURCE=bocha
+BOCHA_API_KEY=your-bocha-api-key
+GOOGLE_API_KEY=
+GOOGLE_CX_ID=
+
+# 抓取后端：0 = requests/trafilatura，1 = Playwright，2 = Crawl4AI
+SEARCH_BACKEND=1
+
+# 如需代理，改为 1 并填写代理地址
+USE_NETWORK_PROXY=0
+HTTP_PROXY=
+HTTPS_PROXY=
+ALL_PROXY=
+```
+
+兼容变量：
 
 ```powershell
-# 大模型配置，0 = 豆包/火山 Ark，1 = SiliconFlow，2 = 小米 MiMo
+# PowerShell 示例
 $env:LLM_PROVIDER="0"
 $env:LLM0_API_KEY="your-ark-api-key"
 $env:LLM0_BASE_URL="https://ark.cn-beijing.volces.com/api/v3"
@@ -63,11 +124,27 @@ $env:GOOGLE_API_KEY="your-google-api-key"
 $env:GOOGLE_CX_ID="your-google-cx-id"
 ```
 
-也可以在仓库根目录创建 `.env` 文件保存本机配置。`.env`、`.local_env.bat`、`.local_python_path.txt`、`.venv/` 等本地环境文件默认不提交到仓库。
+`ARK_API_KEY`、`LLM_API_KEY`、`MIMO_API_KEY` 可作为兼容写法使用，但推荐优先使用 `LLM0_API_KEY`、`LLM1_API_KEY`、`LLM2_API_KEY`。
 
-当然也可以运行项目后在设置里填写
+也可以运行项目后在 Web 控制台的配置页填写运行参数。
 
 ## 安装步骤
+
+### Docker 安装
+
+首次启动会自动构建镜像、安装 Python 依赖，并安装 Playwright Chromium：
+
+```bash
+docker compose build
+```
+
+如果修改了 [requirements.txt](requirements.txt) 或 [Dockerfile](Dockerfile)，重新构建：
+
+```bash
+docker compose build --no-cache
+```
+
+### 本地 Python 安装
 
 进入项目根目录：
 
@@ -115,7 +192,47 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\install_project_env.ps1
 
 ## 启动步骤
 
-推荐启动方式：
+### Docker 启动
+
+在仓库根目录执行：
+
+```bash
+docker compose up -d
+```
+
+启动后访问：
+
+```text
+http://127.0.0.1:8000
+```
+
+如果 `.env` 中配置了 `WEB_PORT=9000`，则访问：
+
+```text
+http://127.0.0.1:9000
+```
+
+常用 Docker 命令：
+
+```bash
+# 查看容器状态
+docker compose ps
+
+# 查看日志
+docker compose logs -f competitor-ai
+
+# 停止服务
+docker compose down
+```
+
+容器会把运行产物写回宿主机：
+
+- `./reports:/app/reports`
+- `./questionnaires:/app/questionnaires`
+
+### 本地 Python 启动
+
+Windows 推荐启动方式：
 
 ```bat
 start_competitor_ai.bat
