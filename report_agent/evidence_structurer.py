@@ -1,11 +1,13 @@
-"""证据结构化 Agent。
+"""evidence结构化 Agent。
 
 本节点只做“材料整理”，把上游 SearchResult/dict/object 统一成 SourceRecord，
-再抽取 EvidenceCard。它不写报告，也不做最终事实检测；核心约束是所有 claim
-必须能被 raw_excerpt 支撑。
+再抽取 EvidenceCard。它不写报告，也不做最终事实检测；核心约束是All claim
+Must能被 raw_excerpt 支撑。
 """
 
 from __future__ import annotations
+
+OUTPUT_LANGUAGE = "English"
 
 import json
 import os
@@ -39,7 +41,7 @@ DIMENSIONS = [
 
 
 _DIMENSION_KEYWORDS = {
-    "user_and_scenario": ["用户", "场景", "persona", "use case", "workflow", "团队"],
+    "user_and_scenario": ["user", "场景", "persona", "use case", "workflow", "团队"],
     "task_completion": ["任务", "执行", "规划", "自动化", "完成", "workflow"],
     "agent_capability": [
         "agent",
@@ -63,12 +65,12 @@ _DIMENSION_KEYWORDS = {
     "integration": ["api", "mcp", "集成", "插件", "连接", "数据源", "slack", "github"],
     "pricing_and_gtm": ["价格", "定价", "订阅", "套餐", "enterprise", "收费", "销售"],
     "moat": ["生态", "壁垒", "分发", "数据", "平台", "marketplace", "community"],
-    "user_feedback": ["评价", "吐槽", "反馈", "complaint", "review", "缺点", "问题"],
+    "user_feedback": ["评价", "吐槽", "反馈", "complaint", "review", "缺点", "issue"],
 }
 
 
 _IMPORTANCE = {
-    "user_and_scenario": "帮助判断目标用户、使用频率和优先切入场景。",
+    "user_and_scenario": "帮助判断目标user、使用频率和优先切入场景。",
     "task_completion": "影响产品是否能形成完整任务闭环。",
     "agent_capability": "影响 Agent 核心能力和技术差异化判断。",
     "trust_and_control": "影响企业客户是否敢授权 Agent 执行任务。",
@@ -76,7 +78,7 @@ _IMPORTANCE = {
     "integration": "影响进入客户现有业务系统和数据流的能力。",
     "pricing_and_gtm": "影响商业化路径、目标客户和采购门槛。",
     "moat": "影响长期竞争壁垒和防御能力。",
-    "user_feedback": "暴露未满足需求和产品机会点。",
+    "user_feedback": "暴露未满足brief和产品机会点。",
 }
 
 
@@ -88,7 +90,7 @@ def structure_evidence(
     target_domain: str,
     competitors: Optional[Sequence[str]] = None,
 ) -> Tuple[List[SourceRecord], List[EvidenceCard]]:
-    """标准化搜索结果并抽取证据卡。
+    """标准化搜索结果并抽取evidence卡。
 
     LLM 可用时优先让模型按 schema 抽取；模型不可用、关闭或返回格式不合法时，
     使用本地 fallback。这样测试环境和无网环境也能跑完整链路。
@@ -215,15 +217,15 @@ def _cards_from_section_payload_llm(
     limit_text = f"最多 {limit} 张" if limit is not None else "尽可能完整抽取"
     data = call_json_llm(
         config=config,
-        system_prompt="你是证据字段归一化助手，只输出 JSON，不写报告。",
+        system_prompt="你是evidence字段归一化助手，只Output JSON，不写报告。",
         user_prompt=f"""
 任务目标:
 {analysis_goal}
 
-分析领域:
+Analyze领域:
 {target_domain}
 
-候选竞品:
+候选competitor:
 {json.dumps(competitors, ensure_ascii=False)}
 
 可选 dimension:
@@ -232,28 +234,28 @@ def _cards_from_section_payload_llm(
 规则切片得到的原文片段:
 {json.dumps(section_payload, ensure_ascii=False, indent=2)}
 
-请把这些片段归一化为{limit_text} EvidenceCard。要求:
+Please merge这些片段归一化为{limit_text} EvidenceCard。要求:
 - 先判断 evidence_type：competitor_fact、user_context、implementation_detail、irrelevant。
-- competitor_fact 才能作为竞品能力、定价、安全、集成、部署等事实；user_context 只能作为需求侧背景，competitor 必须为 null。
+- competitor_fact 才能作为competitor能力、定价、安全、集成、部署等事实；user_context 只能作为brief侧背景，competitor Must为 null。
 - implementation_detail 指 shell 命令、Dockerfile/build 脚本、安装日志、原始配置/代码片段；除非能明确概括成产品级能力，否则丢弃。
-- irrelevant 必须丢弃。
-- 你只做“结构翻译/字段归一化”，不要补充片段之外的新事实。
-- competitor 尽量归属到候选竞品；如果是我方产品参数、问卷背景、行业共性信息，可以为 null。
-- dimension 必须从可选 dimension 中选择；可参考 suggested_dimension，但可以纠正明显错误。
-- claim 必须由 excerpt 直接支撑，写成简洁中文判断。
-- raw_excerpt 必须完整保留或截取自 excerpt，不要改写成新文本。
-- 如果片段只是目录、导航、链接堆砌或与任务无关，直接丢弃。
-- 如果来源包含“我方产品参数关键词库”，只能把它作为对比维度线索，不能当作竞品事实。
-- 如果来源包含“问卷分析补充背景”，只能作为需求侧/用户侧背景，不能当作某个竞品官方事实。
+- irrelevant Must丢弃。
+- 你只做“结构翻译/字段归一化”，Do not补充片段之外的新事实。
+- competitor 尽量归属到候选competitor；If是我方产品parameters、questionnaire背景、行业共性信息，可以为 null。
+- dimension Must从可选 dimension 中选择；可参考 suggested_dimension，但可以纠正明显错误。
+- claim Must由 excerpt 直接支撑，写成简洁中文判断。
+- raw_excerpt Must完整保留或截取自 excerpt，Do not改写成新文本。
+- If片段只是目录、导航、链接堆砌或与任务无关，直接丢弃。
+- Ifsource包含“我方产品parameters关键词库”，只能把它作为对比维度线索，不能当作competitor事实。
+- Ifsource包含“questionnaireAnalyze补充背景”，只能作为brief侧/user侧背景，不能当作某个competitor官方事实。
 - 返回严格 JSON:
 {{
   "evidence_cards": [
     {{
       "source_id": "src_001",
       "evidence_type": "competitor_fact|user_context|implementation_detail|irrelevant",
-      "competitor": "竞品名或 null",
+      "competitor": "competitor名或 null",
       "dimension": "user_and_scenario",
-      "claim": "证据支持的判断",
+      "claim": "evidence支持的判断",
       "raw_excerpt": "来自 excerpt 的原文片段",
       "confidence": 0.0,
       "freshness": "recent|older|unknown",
@@ -359,7 +361,7 @@ def normalize_search_results(
     """把上游各种结果对象归一化成 SourceRecord。
 
     这里做去重、正文截断和 source_id 分配。source_id 是后续 evidence、claim
-    和报告引用的根，因此必须在进入链路最开始就稳定生成。
+    和报告引用的根，因此Must在进入链路最开始就稳定Generate。
     """
 
     records: List[SourceRecord] = []
@@ -472,43 +474,43 @@ def _cards_from_source_payload_llm(
     limit_text = f"最多 {limit} 张" if limit is not None else "尽可能完整抽取"
     data = call_json_llm(
         config=config,
-        system_prompt="你是证据结构化助手，只输出 JSON，不写报告。",
+        system_prompt="你是evidence结构化助手，只Output JSON，不写报告。",
         user_prompt=f"""
 任务目标:
 {analysis_goal}
 
-分析领域:
+Analyze领域:
 {target_domain}
 
-候选竞品:
+候选competitor:
 {json.dumps(competitors, ensure_ascii=False)}
 
 可选 dimension:
 {json.dumps(DIMENSIONS, ensure_ascii=False)}
 
-搜索来源:
+搜索source:
 {json.dumps(source_payload, ensure_ascii=False, indent=2)}
 
-请从来源中{limit_text}证据卡。要求:
+请从source中{limit_text}evidence卡。要求:
 - 先判断 evidence_type：competitor_fact、user_context、implementation_detail、irrelevant。
-- competitor_fact 才能作为竞品能力、定价、安全、集成、部署等事实；user_context 只能作为需求侧背景，competitor 必须为 null。
+- competitor_fact 才能作为competitor能力、定价、安全、集成、部署等事实；user_context 只能作为brief侧背景，competitor Must为 null。
 - implementation_detail 指 shell 命令、Dockerfile/build 脚本、安装日志、原始配置/代码片段；除非能明确概括成产品级能力，否则丢弃。
-- irrelevant 必须丢弃。
-- 如果来源中包含“我方产品参数关键词库”或“已知产品参数关键词库”，必须理解为用户自己的产品/我方产品基准参数，不是竞品参数；只能把其中参数点作为共同对比维度线索，优先抽取竞品资料中能支撑或否定这些参数点的证据。
-- 如果来源中包含“问卷分析补充背景”，要抽取用户画像、场景优先级、价格敏感度、替换意愿、采购顾虑、风险偏好等需求侧证据；这类证据 competitor 可以为 null，不能当作某个竞品官方事实。
+- irrelevant Must丢弃。
+- Ifsource中包含“我方产品parameters关键词库”或“已知产品parameters关键词库”，Must理解为user自己的产品/我方产品基准parameters，不是competitorparameters；只能把其中parameters点作为共同对比维度线索，优先抽取competitor资料中能支撑或否定这些parameters点的evidence。
+- Ifsource中包含“questionnaireAnalyze补充背景”，要抽取user画像、场景优先级、价格敏感度、替换意愿、采购顾虑、risk偏好等brief侧evidence；这类evidence competitor 可以为 null，不能当作某个competitor官方事实。
 - 每张卡只表达一个 claim。
-- claim 必须能被 raw_excerpt 直接支撑。
-- competitor 尽量归属到候选竞品；如果是用户需求、问卷背景或行业共性信息，可以为 null。
-- 不要引入来源中没有的信息。
+- claim Must能被 raw_excerpt 直接支撑。
+- competitor 尽量归属到候选competitor；If是userbrief、questionnaire背景或行业共性信息，可以为 null。
+- Do not引入source中没有的信息。
 - 返回严格 JSON:
 {{
   "evidence_cards": [
     {{
       "source_id": "src_001",
       "evidence_type": "competitor_fact|user_context|implementation_detail|irrelevant",
-      "competitor": "竞品名或 null",
+      "competitor": "competitor名或 null",
       "dimension": "user_and_scenario",
-      "claim": "证据支持的判断",
+      "claim": "evidence支持的判断",
       "raw_excerpt": "原文片段",
       "confidence": 0.0,
       "freshness": "recent|older|unknown",
@@ -569,9 +571,9 @@ def _fallback_evidence_cards(
     config: WritingAgentConfig,
     competitors: List[str],
 ) -> List[EvidenceCard]:
-    """离线证据抽取。
+    """离线evidence抽取。
 
-    fallback 不追求复杂推理，只保证每个来源至少能产出一条可追溯 claim，
+    fallback 不追求复杂推理，只保证Eachsource至少能产出一条可追溯 claim，
     让后续模块和测试可以稳定验证完整流程。
     """
 
@@ -661,7 +663,7 @@ def _section_excerpts(text: str) -> List[Tuple[str, str]]:
         list_heading_match = re.match(r"^\d+[.、]\s*\*\*([^*：:]+)\*\*[：:]\s*(.*)$", line)
         bold_heading_match = re.match(r"^\*\*([^*：:]+)\*\*[：:]\s*(.*)$", line)
         colon_heading_match = re.match(
-            r"^(产品定位|目标用户|核心场景|产品形态/入口|产品形态|商业模式/定价|商业模式|集成生态|限制或风险|用户反馈|特色AI功能矩阵|企业级部署与合规能力|全版本定价体系|计费规则|内置支持大模型清单|新用户试用福利)[：:]\s*(.*)$",
+            r"^(产品定位|目标user|核心场景|产品形态/入口|产品形态|商业模式/定价|商业模式|集成生态|限制或risk|user反馈|特色AI功能矩阵|企业级部署与合规能力|全版本定价体系|计费规则|内置支持大模型清单|新user试用福利)[：:]\s*(.*)$",
             line,
         )
         if heading_match:
@@ -696,7 +698,7 @@ def _section_excerpts(text: str) -> List[Tuple[str, str]]:
 def _prioritize_sections(sections: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
     priority = [
         "产品定位",
-        "目标用户",
+        "目标user",
         "核心场景",
         "产品形态",
         "商业模式",
@@ -708,8 +710,8 @@ def _prioritize_sections(sections: List[Tuple[str, str]]) -> List[Tuple[str, str
         "企业级部署",
         "合规",
         "限制",
-        "风险",
-        "用户反馈",
+        "risk",
+        "user反馈",
     ]
 
     def score(item: Tuple[str, str]) -> int:
@@ -724,7 +726,7 @@ def _prioritize_sections(sections: List[Tuple[str, str]]) -> List[Tuple[str, str
 
 def _dimension_from_heading(heading: str, body: str) -> str:
     text = f"{heading} {body}"
-    if any(key in heading for key in ["目标用户", "核心场景", "产品定位"]):
+    if any(key in heading for key in ["目标user", "核心场景", "产品定位"]):
         return "user_and_scenario"
     if any(key in heading for key in ["定价", "计费", "商业模式", "试用"]):
         return "pricing_and_gtm"
@@ -736,9 +738,9 @@ def _dimension_from_heading(heading: str, body: str) -> str:
         return "integration"
     if any(key in heading for key in ["部署", "合规", "安全", "权限"]):
         return "trust_and_control"
-    if any(key in heading for key in ["限制", "风险"]):
+    if any(key in heading for key in ["限制", "risk"]):
         return "trust_and_control"
-    if "用户反馈" in heading:
+    if "user反馈" in heading:
         return "user_feedback"
     return classify_dimension(text)
 
@@ -778,7 +780,7 @@ def _evidence_limit(config: WritingAgentConfig) -> Optional[int]:
 
 
 def classify_dimension(text: str) -> str:
-    """用关键词把证据粗分到 PM 分析维度。"""
+    """用关键词把evidence粗分到 PM Analyze维度。"""
 
     lowered = text.lower()
     for dimension, keywords in _DIMENSION_KEYWORDS.items():
@@ -792,9 +794,9 @@ def importance_for_dimension(dimension: str) -> str:
 
 
 def infer_competitor(text: str, competitors: Sequence[str]) -> Optional[str]:
-    """从文本中推断竞品归属。
+    """从文本中推断competitor归属。
 
-    优先使用外部传入的竞品名；没有命中时再使用标题前缀作为弱推断。
+    优先使用外部传入的competitor名；没有命中时再使用标题前缀作为弱推断。
     """
 
     lowered = text.lower()
@@ -856,9 +858,9 @@ def _normalize_competitor(
 def _is_context_source(source: SourceRecord) -> bool:
     text = f"{source.title} {source.source} {source.content_source}".lower()
     markers = [
-        "用户需求",
-        "参数词库",
-        "问卷",
+        "userbrief",
+        "parameters词库",
+        "questionnaire",
         "known_params",
         "questionnaire",
         "workflow_context",
@@ -916,7 +918,7 @@ def is_low_value_evidence_text(claim: str, excerpt: str) -> bool:
         "实现一个",
         "输入以下注释",
         "稍等片刻",
-        "自动弹出补全建议",
+        "自动弹出补全suggestion",
         "点击接受",
         "命令面板",
         "快捷键",

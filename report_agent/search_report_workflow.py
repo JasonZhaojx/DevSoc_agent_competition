@@ -9,6 +9,8 @@ No downstream quality-agent dependency is used here.
 
 from __future__ import annotations
 
+OUTPUT_LANGUAGE = "English"
+
 import argparse
 import json
 import os
@@ -170,7 +172,7 @@ def run_search_report_workflow(
         results,
         config=active_writing_config,
         task_id=task_id,
-        analysis_goal=f"基于搜索结果，为 {description} 生成竞品分析报告",
+        analysis_goal=f"基于搜索结果，为 {description} GeneratecompetitorAnalyze报告",
         target_domain=active_target_domain,
         competitors=list(competitors or []),
     )
@@ -316,13 +318,13 @@ def print_startup_banner(
     if logger.latest_log_path:
         _log(f"latest_log_file: {logger.latest_log_path}")
     _log(
-        "提示: 如果使用 conda run 且终端不实时输出，请加 "
+        "提示: If使用 conda run 且终端不实时输出，请加 "
         "`conda run --no-capture-output -n bytedance-ai-competition ...`"
     )
     if logger.latest_log_path:
         _log(f"也可以另开终端监控: tail -f {logger.latest_log_path}")
     _log("")
-    _log("===== 输入参数 =====")
+    _log("===== 输入parameters =====")
     _log(f"product_description: {args.product_description}")
     _log(f"competitors: {args.competitors or '未指定'}")
     _log(f"task_id: {args.task_id}")
@@ -366,25 +368,25 @@ def mock_search_results() -> List[dict[str, Any]]:
             "url": "https://example.com/agentflow",
             "snippet": "AgentFlow 面向企业团队，强调多步骤任务规划、工具调用和审批日志。",
             "content": (
-                "AgentFlow 面向企业团队，支持把调研、数据整理和报告生成拆成多步骤任务。"
+                "AgentFlow 面向企业团队，支持把调研、数据整理和报告Generate拆成多步骤任务。"
                 "产品提供工具调用、执行状态展示、审批日志和权限控制，帮助团队在自动化执行时保留人工确认。"
             ),
             "source": "mock",
             "content_source": "offline smoke test",
         },
         {
-            "title": "ResearchPilot 竞品调研 Agent 评测",
+            "title": "ResearchPilot competitor调研 Agent 评测",
             "url": "https://example.com/researchpilot-review",
             "snippet": "ResearchPilot 模板丰富，但高级配置需要理解 API 和数据源权限。",
             "content": (
-                "ResearchPilot 提供竞品调研模板、资料归纳和引用导出。"
-                "它适合产品经理快速生成初稿，但连接企业内部数据源时配置较复杂。"
+                "ResearchPilot 提供competitor调研模板、资料归纳和引用导出。"
+                "它适合产品经理快速Generate初稿，但连接企业内部数据源时配置较复杂。"
             ),
             "source": "mock",
             "content_source": "offline smoke test",
         },
         {
-            "title": "AutoPM Agent 定价与集成说明",
+            "title": "AutoPM Agent 定价与集成note",
             "url": "https://example.com/autopm-pricing",
             "snippet": "AutoPM Agent 提供团队订阅和企业套餐，支持 API、Slack 与知识库集成。",
             "content": (
@@ -469,13 +471,13 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run report_agent search+report workflow"
     )
-    parser.add_argument("product_description", help="产品方向或竞品分析需求")
-    parser.add_argument("--competitors", default="", help="已知竞品名，逗号分隔")
+    parser.add_argument("product_description", help="产品方向或competitorAnalyzebrief")
+    parser.add_argument("--competitors", default="", help="已知competitor名，逗号分隔")
     parser.add_argument(
         "--search-source",
         choices=["bocha", "google", "duckduckgo"],
         default=None,
-        help="搜索来源；默认读取 SEARCH_SOURCE 环境变量",
+        help="搜索source；默认读取 SEARCH_SOURCE 环境变量",
     )
     parser.add_argument("--task-id", default="search_report_task")
     parser.add_argument("--target-domain", default="")

@@ -1,10 +1,12 @@
 """PM 洞察抽取 Agent。
 
-本节点把 EvidenceCard 转换成产品经理关心的问题：用户是谁、场景是什么、
-竞品优势/短板在哪里、对我们的路线有什么启发。它不负责写长报告。
+本节点把 EvidenceCard 转换成产品经理关心的issue：user是谁、场景是什么、
+competitor优势/短板在哪里、对我们的路线有什么启发。它不负责写长报告。
 """
 
 from __future__ import annotations
+
+OUTPUT_LANGUAGE = "English"
 
 import json
 from collections import defaultdict
@@ -31,15 +33,15 @@ INSIGHT_TYPES = ["user_pain", "product_gap", "differentiation", "risk", "opportu
 
 
 _DIMENSION_TO_INSIGHT = {
-    "user_and_scenario": ("user_pain", "目标用户与高频场景需要被优先验证"),
+    "user_and_scenario": ("user_pain", "目标user与高频场景需要被优先验证"),
     "task_completion": ("product_gap", "任务闭环能力决定产品可用性"),
-    "agent_capability": ("differentiation", "Agent 能力是核心差异化来源"),
-    "trust_and_control": ("risk", "信任与控制机制是企业落地风险点"),
+    "agent_capability": ("differentiation", "Agent 能力是核心差异化source"),
+    "trust_and_control": ("risk", "信任与控制机制是企业落地risk点"),
     "experience": ("opportunity", "低门槛体验是提升激活的机会"),
     "integration": ("differentiation", "系统集成能力影响企业采购价值"),
     "pricing_and_gtm": ("risk", "定价和销售路径会影响增长效率"),
     "moat": ("differentiation", "生态与数据沉淀可能形成长期壁垒"),
-    "user_feedback": ("opportunity", "用户反馈暴露可切入的未满足需求"),
+    "user_feedback": ("opportunity", "user反馈暴露可切入的未满足brief"),
 }
 
 
@@ -50,7 +52,7 @@ def extract_pm_insights(
     analysis_goal: str,
     target_domain: str,
 ) -> List[PMInsight]:
-    """从证据卡抽取结构化 PM 洞察。"""
+    """从evidence卡抽取结构化 PM 洞察。"""
 
     if not evidence_cards:
         return []
@@ -75,7 +77,7 @@ def _insights_from_llm(
 ) -> List[PMInsight]:
     """调用 LLM 抽取洞察，并强制校验 evidence_ids。
 
-    只有绑定到现有 evidence_id 的洞察才会进入下游，防止模型生成无证据观点。
+    只有绑定到现有 evidence_id 的洞察才会进入下游，防止模型Generate无evidence观点。
     """
 
     chunks = chunk_evidence_cards(evidence_cards)
@@ -101,31 +103,31 @@ def _insights_from_llm(
     payload = evidence_prompt_payload(evidence_cards)
     data = call_json_llm(
         config=config,
-        system_prompt="你是资深产品经理，只输出 JSON。",
+        system_prompt="你是资深产品经理，只Output JSON。",
         user_prompt=f"""
-分析目标:
+Analyze目标:
 {analysis_goal}
 
-分析领域:
+Analyze领域:
 {target_domain}
 
 Evidence Cards:
 {json.dumps(payload, ensure_ascii=False, indent=2)}
 
 请提炼产品经理关心的结构化洞察。要求:
-- 每条洞察必须绑定 evidence_ids，且 evidence_ids 必须来自输入。
-- 不要只复述资料，要解释“这意味着什么”：对定位、目标用户、功能优先级、商业化、增长、可信任机制或差异化路线有什么启发。
-- 如果证据中包含我方产品参数词库或已知产品参数词库，要理解为用户自己的产品/我方产品基准参数，不是竞品事实；围绕这些参数点提炼“哪些参数会影响竞品判断、哪些竞品缺证据、哪些参数应进入后续验证清单”。
-- 如果证据中包含问卷分析，要把它作为用户需求和采购决策背景，提炼用户画像、场景优先级、价格敏感度、替换意愿、风险顾虑对产品路线的启发。
-- 注意区分竞品事实和问卷结论：问卷只能支撑用户侧/需求侧洞察，不能支撑某个竞品官方能力判断。
+- 每条洞察Must绑定 evidence_ids，且 evidence_ids Must来自输入。
+- Do not只复述资料，要解释“这意味着什么”：对定位、目标user、功能优先级、商业化、增长、可信任机制或差异化路线有什么启发。
+- Ifevidence中包含我方产品parameters词库或已知产品parameters词库，要理解为user自己的产品/我方产品基准parameters，不是competitor事实；围绕这些parameters点提炼“哪些parameters会影响competitor判断、哪些competitor缺evidence、哪些parameters应进入后续验证清单”。
+- Ifevidence中包含questionnaireAnalyze，要把它作为userbrief和采购决策背景，提炼user画像、场景优先级、价格敏感度、替换意愿、risk顾虑对产品路线的启发。
+- 注意区分competitor事实和questionnaire结论：questionnaire只能支撑user侧/brief侧洞察，不能支撑某个competitor官方能力判断。
 - 返回严格 JSON:
 {{
   "insights": [
     {{
       "type": "user_pain|product_gap|differentiation|risk|opportunity",
       "title": "洞察标题",
-      "description": "洞察说明",
-      "related_competitors": ["竞品"],
+      "description": "洞察note",
+      "related_competitors": ["competitor"],
       "evidence_ids": ["ev_001"],
       "pm_value": "对产品经理的价值",
       "confidence": 0.0
@@ -169,9 +171,9 @@ Evidence Cards:
 
 
 def _fallback_pm_insights(evidence_cards: List[EvidenceCard]) -> List[PMInsight]:
-    """按证据维度聚合成本地洞察。
+    """按evidence维度聚合成本地洞察。
 
-    fallback 的目标是流程稳定和结构完整，不替代真实 PM 分析；真实模式下可由
+    fallback 的目标是流程稳定和结构完整，不替代真实 PM Analyze；真实模式下可由
     LLM 给出更细的洞察。
     """
 
@@ -211,15 +213,15 @@ def _fallback_pm_insights(evidence_cards: List[EvidenceCard]) -> List[PMInsight]
 
 def _pm_value_for_dimension(dimension: str) -> str:
     values = {
-        "user_and_scenario": "用于确定优先服务的用户画像、场景边界和任务频率。",
-        "task_completion": "用于拆解产品必须补齐的任务规划、执行和异常处理能力。",
+        "user_and_scenario": "用于确定优先服务的user画像、场景边界和任务频率。",
+        "task_completion": "用于拆解产品Must补齐的任务规划、执行和异常处理能力。",
         "agent_capability": "用于判断核心技术能力投入和差异化方向。",
         "trust_and_control": "用于设计权限、人审、日志和可回滚机制。",
         "experience": "用于优化首次使用、配置向导和结果交付体验。",
         "integration": "用于规划 API、MCP、企业数据源和业务系统连接。",
         "pricing_and_gtm": "用于判断商业模式、套餐和销售路径。",
-        "moat": "用于识别长期壁垒和防御策略。",
-        "user_feedback": "用于定位未满足需求和高优先级改进点。",
+        "moat": "用于识别长期壁垒和防御strategy。",
+        "user_feedback": "用于定位未满足brief和高优先级改进点。",
     }
     return values.get(dimension, "用于支持产品路线优先级判断。")
 

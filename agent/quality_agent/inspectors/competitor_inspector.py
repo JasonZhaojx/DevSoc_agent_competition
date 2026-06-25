@@ -13,9 +13,9 @@ COMPETITOR_KEYS = (
     "name",
     "product",
     "product_name",
-    "竞品",
-    "竞品名",
-    "竞品名称",
+    "competitor",
+    "competitor名",
+    "competitor名称",
     "产品",
     "产品名",
     "产品名称",
@@ -67,27 +67,27 @@ def _competitor_appears_in_table(table: Dict[str, Any], competitor: str) -> bool
     return needle in table_text
 
 
-# 检查竞品分析覆盖完整性
+# 检查competitorAnalyze覆盖完整性
 def check_competitor_coverage(analysis: ReportAnalysis) -> List[QualityIssue]:
     """Check competitor analysis coverage completeness."""
     issues: List[QualityIssue] = []
     
-    # 检查报告是否有竞品分析部分
+    # 检查报告是否有competitorAnalyze部分
     competitors = analysis.competitors
     if not competitors:
         return issues
     
-    # 检查每个竞品是否有证据支持
+    # 检查Eachcompetitor是否有evidence支持
     competitor_evidence_count: Dict[str, int] = {c: 0 for c in competitors}
     
-    # 检查每个证据是否包含任何竞品
+    # 检查Eachevidence是否包含任何competitor
     for evidence in analysis.evidence_list:
         text = (evidence.title + " " + evidence.claim).lower()
         for competitor in competitors:
             if competitor.lower() in text:
                 competitor_evidence_count[competitor] += 1
     
-    # 检查是否有竞品缺乏证据支持
+    # 检查是否有competitor缺乏evidence支持
     underrepresented = [
         comp for comp, count in competitor_evidence_count.items()
         if count == 0
@@ -96,16 +96,16 @@ def check_competitor_coverage(analysis: ReportAnalysis) -> List[QualityIssue]:
         issues.append(QualityIssue(
             type=IssueType.INSUFFICIENT_EVIDENCE,
             severity=IssueSeverity.MAJOR if len(underrepresented) > 1 else IssueSeverity.MINOR,
-            description=f"竞品 {', '.join(underrepresented)} 缺乏证据支持",
-            suggestion=f"增加针对 {', '.join(underrepresented)} 的搜索和分析",
-            explanation="每个竞品都需要有足够的证据支持才能进行有效对比",
-            impact="缺乏证据支持的竞品分析会导致对比不完整"
+            description=f"competitor {', '.join(underrepresented)} 缺乏evidence支持",
+            suggestion=f"增加针对 {', '.join(underrepresented)} 的搜索和Analyze",
+            explanation="Eachcompetitor都需要有足够的evidence支持才能进行有效对比",
+            impact="缺乏evidence支持的competitorAnalyze会导致对比不完整"
         ))
     
-    # 检查是否有对比表缺少竞品
+    # 检查是否有对比表缺少competitor
     if analysis.comparison_tables:
         reported_missing_sets: Set[tuple[str, ...]] = set()
-        # 检查每个对比表是否包含所有竞品
+        # 检查Each对比表是否包含Allcompetitor
         for table in analysis.comparison_tables:
             table_competitors = table.get("competitors", []) or table.get("rows", [])
             if isinstance(table_competitors, list) and len(table_competitors) > 0:
@@ -124,10 +124,10 @@ def check_competitor_coverage(analysis: ReportAnalysis) -> List[QualityIssue]:
                     issues.append(QualityIssue(
                         type=IssueType.INCOMPLETE_INFO,
                         severity=IssueSeverity.MINOR,
-                        description=f"对比表缺少竞品: {', '.join(missing_in_table)}",
+                        description=f"对比表缺少competitor: {', '.join(missing_in_table)}",
                         suggestion=f"在对比表中添加 {', '.join(missing_in_table)} 的信息",
-                        explanation="完整的对比表应包含所有目标竞品",
-                        impact="缺少竞品的对比表会影响分析的全面性"
+                        explanation="完整的对比表应包含All目标competitor",
+                        impact="缺少competitor的对比表会影响Analyze的全面性"
                     ))
     
     return issues

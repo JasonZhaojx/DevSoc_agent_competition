@@ -1,10 +1,12 @@
-"""SWOT 生成 Agent。
+"""SWOT Generate Agent。
 
 SWOT 是报告里的战略判断层。本节点只基于已有 EvidenceCard、PMInsight 和
-竞品画像生成结论，每条 SWOT 都必须绑定 evidence_ids。
+competitor画像Generate结论，每条 SWOT 都Must绑定 evidence_ids。
 """
 
 from __future__ import annotations
+
+OUTPUT_LANGUAGE = "English"
 
 import json
 from typing import Any, Dict, List
@@ -44,7 +46,7 @@ def generate_swot(
     competitor_profiles: List[Dict[str, Any]],
     config: WritingAgentConfig,
 ) -> SWOTResult:
-    """生成证据驱动的 SWOT。"""
+    """Generateevidence驱动的 SWOT。"""
 
     if not evidence_cards:
         return SWOTResult()
@@ -61,7 +63,7 @@ def _swot_from_llm(
     competitor_profiles: List[Dict[str, Any]],
     config: WritingAgentConfig,
 ) -> SWOTResult:
-    """使用 LLM 生成 SWOT，并过滤没有证据绑定的条目。"""
+    """使用 LLM Generate SWOT，并过滤没有evidence绑定的条目。"""
 
     chunks = chunk_evidence_cards(evidence_cards)
     if len(chunks) > 1:
@@ -86,7 +88,7 @@ def _swot_from_llm(
 
     data = call_json_llm(
         config=config,
-        system_prompt="你是产品战略分析师，只输出 JSON。",
+        system_prompt="你是产品战略Analyze师，只Output JSON。",
         user_prompt=f"""
 Evidence Cards:
 {json.dumps(evidence_prompt_payload(evidence_cards), ensure_ascii=False, indent=2)}
@@ -97,14 +99,14 @@ PM Insights:
 Competitor Profiles:
 {json.dumps(competitor_profiles, ensure_ascii=False, indent=2)}
 
-请生成证据驱动的 SWOT。规则:
-- Strength / Weakness 是竞品内部因素。
+请Generateevidence驱动的 SWOT。规则:
+- Strength / Weakness 是competitor内部因素。
 - Opportunity / Threat 是外部环境因素。
-- 我方产品参数词库或已知产品参数词库应作为识别 Strength/Weakness 的重要参照：它来自用户自己的产品/我方产品，不是竞品事实；某竞品在共同参数点上证据充分可形成优势，缺证据或明显不足可形成弱点。
-- 问卷分析应作为 Opportunity/Threat 的重要参照：用户价格敏感、替换意愿、采购顾虑、风险偏好、场景优先级都可以影响机会和威胁判断。
-- 问卷分析不能直接证明某个竞品具备官方能力，只能说明用户侧需求、偏好和顾虑。
-- 每条必须绑定 evidence_ids，且必须来自输入。
-- 不要生成无证据判断。
+- 我方产品parameters词库或已知产品parameters词库应作为识别 Strength/Weakness 的重要参照：它来自user自己的产品/我方产品，不是competitor事实；某competitor在共同parameters点上evidence充分可形成优势，缺evidence或明显不足可形成弱点。
+- questionnaireAnalyze应作为 Opportunity/Threat 的重要参照：user价格敏感、替换意愿、采购顾虑、risk偏好、场景优先级都可以影响机会和威胁判断。
+- questionnaireAnalyze不能直接证明某个competitor具备官方能力，只能noteuser侧brief、偏好和顾虑。
+- 每条Must绑定 evidence_ids，且Must来自输入。
+- Do notGenerate无evidence判断。
 
 返回严格 JSON:
 {{
@@ -115,7 +117,7 @@ Competitor Profiles:
     "threats": []
   }}
 }}
-每个 item 字段为 point, why_it_matters, evidence_ids, pm_implication, confidence。
+Each item 字段为 point, why_it_matters, evidence_ids, pm_implication, confidence。
 """.strip(),
     )
     if not isinstance(data, dict):
@@ -136,7 +138,7 @@ Competitor Profiles:
 def _parse_swot_items(raw_items: Any, allowed_ids: set[str]) -> List[SWOTItem]:
     """解析并校验 SWOT item。
 
-    关键校验是 evidence_ids 必须来自当前 evidence 集合，避免报告出现不可检测
+    关键校验是 evidence_ids Must来自当前 evidence 集合，避免报告出现不可检测
     的战略判断。
     """
 
@@ -183,7 +185,7 @@ def _fallback_swot(
 ) -> SWOTResult:
     """离线 SWOT。
 
-    按维度把证据映射到 SWOT 四象限，保证 offline 流程有完整结构输出。
+    按维度把evidence映射到 SWOT 四象限，保证 offline 流程有完整结构输出。
     """
 
     del pm_insights
@@ -234,21 +236,21 @@ def _make_item(kind: str, cards: List[EvidenceCard]) -> SWOTItem:
     avg_confidence = (
         sum(card.confidence for card in cards) / len(cards) if cards else 0.5
     )
-    lead_claim = cards[0].claim if cards else "当前资料有限，需要补充证据。"
+    lead_claim = cards[0].claim if cards else "当前资料有限，需要补充evidence。"
     if kind == "Strength":
         return SWOTItem(
-            point="竞品在已披露能力上具备可感知优势",
+            point="competitor在已披露能力上具备可感知优势",
             why_it_matters=clean_text(lead_claim, 220),
             evidence_ids=evidence_ids,
-            pm_implication="我们需要把竞品强项拆成可测试能力，并明确自身差异化位置。",
+            pm_implication="我们需要把competitor强项拆成可测试能力，并明确自身差异化位置。",
             confidence=round(avg_confidence, 2),
         )
     if kind == "Weakness":
         return SWOTItem(
-            point="现有资料暴露出体验或用户反馈层面的改进空间",
+            point="现有资料暴露出体验或user反馈层面的改进空间",
             why_it_matters=clean_text(lead_claim, 220),
             evidence_ids=evidence_ids,
-            pm_implication="优先寻找用户配置、信任、结果采纳上的低成本突破点。",
+            pm_implication="优先寻找user配置、信任、结果采纳上的低成本突破点。",
             confidence=round(avg_confidence, 2),
         )
     if kind == "Opportunity":
@@ -256,7 +258,7 @@ def _make_item(kind: str, cards: List[EvidenceCard]) -> SWOTItem:
             point="市场仍存在围绕高频场景做深的机会",
             why_it_matters=clean_text(lead_claim, 220),
             evidence_ids=evidence_ids,
-            pm_implication="不要泛化做通用 Agent，先用场景闭环证明业务价值。",
+            pm_implication="Do not泛化做通用 Agent，先用场景闭环证明业务价值。",
             confidence=round(avg_confidence, 2),
         )
     return SWOTItem(

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+OUTPUT_LANGUAGE = "English"
+
 import sys
 from pathlib import Path
 
@@ -35,10 +37,10 @@ def test_generic_table_fill_merges_by_row_index() -> None:
     tables = [
         {
             "table_name": "产品形态与入口对比",
-            "columns": ["竞品", "主要入口", "证据ID"],
+            "columns": ["competitor", "主要入口", "evidenceID"],
             "rows": [
                 {
-                    "竞品": "OpenCode",
+                    "competitor": "OpenCode",
                     "主要入口": PENDING_SEARCH,
                     "evidence_ids": [],
                     "pending_search_query": "OpenCode product entry",
@@ -49,10 +51,10 @@ def test_generic_table_fill_merges_by_row_index() -> None:
     filled_tables = [
         {
             "table_name": "产品形态与入口对比",
-            "columns": ["竞品", "主要入口", "证据ID"],
+            "columns": ["competitor", "主要入口", "evidenceID"],
             "rows": [
                 {
-                    "竞品": "OpenCode",
+                    "competitor": "OpenCode",
                     "主要入口": "终端 TUI、桌面应用与 IDE 扩展",
                     "evidence_ids": ["gap_src_001"],
                 }
@@ -81,8 +83,8 @@ def test_generic_table_fill_merges_by_row_index() -> None:
 def test_empty_generic_table_gets_pending_rows() -> None:
     tables = [
         {
-            "table_name": "竞品基础定位与用户场景对比",
-            "columns": ["竞品", "目标用户", "核心场景", "证据ID"],
+            "table_name": "competitor基础定位与user场景对比",
+            "columns": ["competitor", "目标user", "核心场景", "evidenceID"],
             "rows": [],
         }
     ]
@@ -91,20 +93,20 @@ def test_empty_generic_table_gets_pending_rows() -> None:
     rows = marked[0]["rows"]
 
     assert len(rows) == 2
-    assert rows[0]["竞品"] == "OpenCode"
-    assert rows[0]["目标用户"].startswith(PENDING_SEARCH)
-    assert rows[1]["竞品"] == "Qoder"
+    assert rows[0]["competitor"] == "OpenCode"
+    assert rows[0]["目标user"].startswith(PENDING_SEARCH)
+    assert rows[1]["competitor"] == "Qoder"
     assert rows[1]["核心场景"].startswith(PENDING_SEARCH)
 
 
 def test_partial_generic_table_gets_missing_competitors_and_finalizes_pending() -> None:
     tables = [
         {
-            "table_name": "商业化与定价策略对比",
-            "columns": ["竞品名称", "公开套餐档位", "企业版公开定价", "证据ID"],
+            "table_name": "商业化与定价strategy对比",
+            "columns": ["competitor名称", "公开套餐档位", "企业版公开定价", "evidenceID"],
             "rows": [
                 {
-                    "竞品名称": "OpenCode",
+                    "competitor名称": "OpenCode",
                     "公开套餐档位": "开源免费",
                     "企业版公开定价": PENDING_SEARCH,
                     "evidence_ids": [],
@@ -115,7 +117,7 @@ def test_partial_generic_table_gets_missing_competitors_and_finalizes_pending() 
 
     marked = _mark_table_gaps(tables, ["OpenCode", "CodeBuddy", "Qoder"])
     rows = marked[0]["rows"]
-    names = [row["竞品名称"] for row in rows]
+    names = [row["competitor名称"] for row in rows]
 
     assert names == ["OpenCode", "CodeBuddy", "Qoder"]
     assert rows[1]["公开套餐档位"].startswith(PENDING_SEARCH)
@@ -129,14 +131,14 @@ def test_partial_generic_table_gets_missing_competitors_and_finalizes_pending() 
 def test_public_missing_phrases_are_search_gaps() -> None:
     tables = [
         {
-            "table_name": "用户体验与市场反馈对比",
-            "columns": ["竞品名称", "核心交互特性", "公开正面用户反馈", "公开负面用户反馈", "关联证据ID"],
+            "table_name": "user体验与市场反馈对比",
+            "columns": ["competitor名称", "核心交互特性", "公开正面user反馈", "公开负面user反馈", "关联evidenceID"],
             "rows": [
                 {
-                    "竞品名称": "CodeBuddy",
+                    "competitor名称": "CodeBuddy",
                     "核心交互特性": "未找到明确公开信息",
-                    "公开正面用户反馈": "暂未公开明确披露相关信息",
-                    "公开负面用户反馈": "未公开SSO单点登录、SOC2认证等特性",
+                    "公开正面user反馈": "暂未公开明确披露相关信息",
+                    "公开负面user反馈": "未公开SSO单点登录、SOC2认证等特性",
                     "evidence_ids": [],
                 }
             ],
@@ -147,7 +149,7 @@ def test_public_missing_phrases_are_search_gaps() -> None:
     gaps = _collect_gaps([], marked, ["CodeBuddy"])
 
     assert len(gaps) >= 3
-    assert {gap.field for gap in gaps} >= {"核心交互特性", "公开正面用户反馈", "公开负面用户反馈"}
+    assert {gap.field for gap in gaps} >= {"核心交互特性", "公开正面user反馈", "公开负面user反馈"}
 
 
 def test_all_pending_mode_uses_every_gap_as_query_budget() -> None:
@@ -186,8 +188,8 @@ def test_strip_internal_fields_fills_missing_generic_columns() -> None:
     tables = [
         {
             "table_name": "pricing",
-            "columns": ["竞品", "企业版定价档位", "计费单位", "支撑证据ID"],
-            "rows": [{"竞品": "qoder", "企业版定价档位": PENDING_SEARCH}],
+            "columns": ["competitor", "企业版定价档位", "计费单位", "支撑evidenceID"],
+            "rows": [{"competitor": "qoder", "企业版定价档位": PENDING_SEARCH}],
         }
     ]
 
@@ -196,7 +198,7 @@ def test_strip_internal_fields_fills_missing_generic_columns() -> None:
 
     assert row["企业版定价档位"] == NO_PRODUCT_EVIDENCE
     assert row["计费单位"] == NO_PRODUCT_EVIDENCE
-    assert "支撑证据ID" not in row
+    assert "支撑evidenceID" not in row
 
 
 if __name__ == "__main__":

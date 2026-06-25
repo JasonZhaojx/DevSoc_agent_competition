@@ -60,7 +60,7 @@ AUTH_SECURE_COOKIE = os.getenv("WEB_AUTH_SECURE_COOKIE", "").lower() in {"1", "t
 LOCAL_ARK_API_KEY = ""
 LOCAL_ARK_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
 LOCAL_ARK_MODEL = "ep-20260514111325-xjmj7"
-LOCAL_BOCHA_API_KEY = ""#填写在这（博查）
+LOCAL_BOCHA_API_KEY = ""#Fill here (Bocha)
 LOCAL_GOOGLE_API_KEY = ""
 LOCAL_GOOGLE_CX_ID = ""
 
@@ -163,7 +163,7 @@ QUESTIONNAIRE_LOCK = threading.Lock()
 AUTH_SESSIONS: dict[str, float] = {}
 AUTH_LOCK = threading.Lock()
 FINAL_REPORT_RE = re.compile(
-    r"(?:总总结已保存|Markdown 已保存|Report Agent Markdown 已保存):\s*(.+\.md)"
+    r"(?:summary saved|Markdown saved|Report Agent Markdown saved):\s*(.+\.md)"
 )
 
 
@@ -818,7 +818,7 @@ def terminate_job(job: Job) -> tuple[bool, str]:
         job.process_stdin = None
         job.stdin_closed = True
 
-    append_log(job, "[web-input] 用户请求终止工作流")
+    append_log(job, "[web-input] user requested workflow termination")
     append_runtime_log(job, "terminate requested from web UI")
 
     if stdin is not None:
@@ -903,7 +903,7 @@ def submit_product_selection(job: Job, selection: str) -> tuple[bool, str]:
             job.stdin_closed = False
             job.error = str(exc)
         return False, f"failed to submit selection: {exc}"
-    append_log(job, f"[web-input] 产品选择: {selection}")
+    append_log(job, f"[web-input] product selection: {selection}")
     append_runtime_log(job, f"stdin product selection sent: {selection}")
     return True, ""
 
@@ -979,37 +979,37 @@ def update_stage_from_log(job: Job, line: str) -> None:
     if any(
         token in line
         for token in (
-            "LLM 改写后的搜索词",
-            "搜索到的产品",
+            "LLM rewritten search queries",
+            "discovered products",
             "rewrite search queries",
             "find_product_names",
         )
     ):
         set_stage(job, "discover")
-    elif any(token in line for token in ("请选择", "[web-input] 产品选择")):
+    elif any(token in line for token in ("please select", "[web-input] product selection")):
         set_stage(job, "select")
     elif any(
         token in line
         for token in (
-            "将要分析的产品",
-            "启动独立命令行窗口分析",
-            "等待所选产品分析报告完成",
-            "分析窗口已经启动",
+            "products to analyze",
+            "started independent analysis process",
+            "waiting for selected product analysis report completion",
+            "analysis process started",
         )
     ):
         set_stage(job, "analyze")
     elif any(
         token in line
         for token in (
-            "生成所选产品大总结",
-            "Report Agent 标准分析链路",
+            "generate selected product summary",
+            "Report Agent standard analysis pipeline",
             "FINAL COMPARISON",
         )
     ):
         set_stage(job, "summarize")
-    elif any(token in line for token in ("Quality Agent 质检", "最终报告质检闭环", "[quality-loop]")):
+    elif any(token in line for token in ("Quality Agent QA", "Final reportQA loop", "[quality-loop]")):
         set_stage(job, "quality")
-    elif "总总结已保存" in line or "Markdown 已保存" in line:
+    elif "summary saved" in line or "Markdown saved" in line:
         set_stage(job, "done")
 
 
@@ -1023,14 +1023,14 @@ def update_runtime_from_log(job: Job, line: str) -> None:
         append_runtime_log(job, f"section: {job.log_section}")
         return
 
-    if job.log_section == "LLM 改写后的搜索词" and stripped.startswith("- "):
+    if job.log_section == "LLM rewritten search queries" and stripped.startswith("- "):
         query = stripped[2:].strip()
         if query and query not in job.search_queries:
             job.search_queries.append(query)
             append_runtime_log(job, f"search query queued: {query}")
         return
 
-    if job.log_section == "搜索到的产品":
+    if job.log_section == "discovered products":
         match = re.match(r"^\d+[.)、]\s*(.+)$", stripped)
         if match:
             product = match.group(1).strip()
@@ -1040,7 +1040,7 @@ def update_runtime_from_log(job: Job, line: str) -> None:
             mark_waiting_for_selection(job)
         return
 
-    if job.log_section == "将要分析的产品":
+    if job.log_section == "products to analyze":
         match = re.match(r"^\d+[.)、]\s*(.+)$", stripped)
         if match:
             ensure_subtask(job, match.group(1).strip(), "queued")
@@ -1059,7 +1059,7 @@ def update_runtime_from_log(job: Job, line: str) -> None:
         append_runtime_log(job, f"analysis subtask failed: {product}")
         return
 
-    if "报告写入" in stripped or "Report Agent Markdown 已保存" in stripped:
+    if "Report written" in stripped or "Report Agent Markdown saved" in stripped:
         mark_running_subtasks(job, "done")
 
 
@@ -1214,11 +1214,11 @@ def questionnaire_file_kind(path: Path) -> str:
 
 def questionnaire_file_kind_label(kind: str) -> str:
     return {
-        "questionnaire": "问卷",
-        "response_jsonl": "回答 JSONL",
-        "response_csv": "回答 CSV",
-        "analysis": "分析报告",
-    }.get(kind, "文件")
+        "questionnaire": "Questionnaire",
+        "response_jsonl": "Response JSONL",
+        "response_csv": "Answer CSV",
+        "analysis": "AnalyzeReport",
+    }.get(kind, "File")
 
 
 def questionnaire_file_title(path: Path) -> str:
@@ -1261,7 +1261,7 @@ def safe_questionnaire_path(name: str) -> Path | None:
 def generate_questionnaire_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
     product_description = str(payload.get("product_description") or "").strip()
     if not product_description:
-        raise RuntimeError("产品/竞品方向不能为空")
+        raise RuntimeError("Product / competitor direction cannot be empty")
     own_param_text = truncate_text(
         str(payload.get("own_param_text") or ""),
         clamp_int(payload.get("own_param_max_chars"), 0, 100000, 12000),
@@ -1289,7 +1289,7 @@ def generate_questionnaire_from_payload(payload: dict[str, Any]) -> dict[str, An
             search_results=search_results,
         )
         if not items:
-            raise RuntimeError("模型没有生成有效问卷题目")
+            raise RuntimeError("The model did not generate valid questionnaire items")
         output_path = questionnaire_flow.write_jsonl(items, product_description)
 
     return {
@@ -1319,7 +1319,7 @@ def simulate_questionnaire_from_payload(payload: dict[str, Any]) -> dict[str, An
             questionnaire_flow.read_jsonl(questionnaire_path)
         )
         if not items:
-            raise RuntimeError("问卷文件没有有效题目")
+            raise RuntimeError("The questionnaire file has no valid items")
         responses = questionnaire_flow.simulate_responses(
             product_description=product_description,
             own_param_text=own_param_text,
@@ -1352,7 +1352,7 @@ def analyze_questionnaire_from_payload(payload: dict[str, Any]) -> dict[str, Any
     questionnaire_path = questionnaire_path_from_payload(payload, "questionnaire_name")
     responses_path = questionnaire_path_from_payload(payload, "responses_name")
     if questionnaire_file_kind(responses_path) != "response_jsonl":
-        raise RuntimeError("问卷分析请选择 responses.jsonl 文件")
+        raise RuntimeError("Analyze questionnaireplease select responses.jsonl File")
     product_description = questionnaire_product_description(payload, questionnaire_path)
 
     with QUESTIONNAIRE_LOCK:
@@ -1362,9 +1362,9 @@ def analyze_questionnaire_from_payload(payload: dict[str, Any]) -> dict[str, Any
         )
         responses = questionnaire_flow.read_jsonl(responses_path)
         if not items:
-            raise RuntimeError("问卷文件没有有效题目")
+            raise RuntimeError("The questionnaire file has no valid items")
         if not responses:
-            raise RuntimeError("回答文件没有有效数据")
+            raise RuntimeError("The response file has no valid data")
         code_analysis = questionnaire_flow.build_code_analysis(items, responses)
         analysis_markdown = questionnaire_flow.analyze_survey_with_llm(
             product_description,
@@ -1393,7 +1393,7 @@ def questionnaire_path_from_payload(payload: dict[str, Any], key: str) -> Path:
     name = str(payload.get(key) or payload.get(key.replace("_name", "_path")) or "").strip()
     path = safe_questionnaire_path(name)
     if not path or not path.exists():
-        raise RuntimeError("问卷文件不存在")
+        raise RuntimeError("Questionnaire file does not exist")
     return path
 
 
@@ -1596,23 +1596,23 @@ def skill_report_bundle_from_payload(
     if report_path and report_path.exists() and is_report_markdown_path(report_path):
         task_id = task_id or task_id_for_report(report_path)
     if not task_id:
-        raise RuntimeError("请选择报告任务")
+        raise RuntimeError("please selectReportTask")
 
     final_path, agent_path = skill_source_reports_for_task(task_id)
     final_summary = summarize_report(final_path, include_issues=False)
     agent_summary = summarize_report(agent_path, include_issues=False)
     article_parts = [
-        "# Skill 来源报告包",
+        "# Skill Source Report Package",
         "",
-        f"- 任务: {task_id}",
-        f"- 最终报告: {report_display_name(final_path)}",
-        f"- 分析总报告: {report_display_name(agent_path)}",
+        f"- Task: {task_id}",
+        f"- Final report: {report_display_name(final_path)}",
+        f"- Analysis summary: {report_display_name(agent_path)}",
         "",
-        "## 最终报告",
+        "## Final report",
         "",
         extract_article(final_path, marker=marker),
         "",
-        "## 分析总报告",
+        "## Analysis summary",
         "",
         extract_article(agent_path, marker=marker),
         "",
@@ -1621,7 +1621,7 @@ def skill_report_bundle_from_payload(
     return {
         "article": "\n".join(article_parts).strip(),
         "source_label": (
-            f"{task_id} · {title} · 最终报告+分析总报告"
+            f"{task_id} · {title} · Final report+Analysis summary"
         ),
         "summary": final_summary,
         "primary_path": final_path,
@@ -1649,7 +1649,7 @@ def skill_source_reports_for_task(task_id: str) -> tuple[Path, Path]:
     final_paths = [path for path in report_paths if report_type_for(path) == "final"]
     agent_paths = [path for path in report_paths if report_type_for(path) == "report_agent"]
     if not final_paths or not agent_paths:
-        raise RuntimeError("生成 Skill 需要同一任务下同时存在最终报告和分析总报告")
+        raise RuntimeError("Building a Skill requires both a final report and an analysis summary in the same task")
     final_path = max(final_paths, key=lambda path: path.stat().st_mtime)
     agent_path = max(agent_paths, key=lambda path: path.stat().st_mtime)
     return final_path, agent_path
@@ -2062,7 +2062,7 @@ def summarize_report(
     issue_count = len(issues) if include_issues else (
         len(quality_issues) if quality_issues else count_issue_lines(text)
     )
-    references = sorted(set(re.findall(r"\[(?:[^]\[]+\])?\[?参考点\d+\]?", text)))
+    references = sorted(set(re.findall(r"\[(?:[^]\[]+\])?\[?References\d+\]?", text)))
     return {
         "title": title,
         "task_id": task_id_for_report(path),
@@ -2090,19 +2090,19 @@ def display_report_title(title: str, text: str) -> str:
     subject = report_subject_from_markdown(text)
     if not subject:
         return title
-    if title == "所选产品横向对比报告":
-        return f"{subject}类似产品横向对比报告"
-    if title.startswith("Report Agent 标准竞品分析报告"):
+    if title == "Selected Product Cross-Comparison Report":
+        return f"{subject}Similar Product Cross-Comparison Report"
+    if title.startswith("Report Agent Standard Competitor Analysis Report"):
         return title.replace(
-            "Report Agent 标准竞品分析报告",
-            f"Report Agent 标准{subject}竞品分析报告",
+            "Report Agent Standard Competitor Analysis Report",
+            f"Report Agent Standard {subject}Competitor Analysis Report",
             1,
         )
     return title
 
 
 def report_subject_from_markdown(text: str) -> str:
-    match = re.search(r"(?m)^原始需求[:：]\s*(.+?)\s*$", text)
+    match = re.search(r"(?m)^Original brief[:：]\s*(.+?)\s*$", text)
     if not match:
         return ""
     return normalize_report_subject(match.group(1))
@@ -2111,12 +2111,13 @@ def report_subject_from_markdown(text: str) -> str:
 def normalize_report_subject(value: str) -> str:
     text = re.sub(r"\s+", " ", str(value or "")).strip()
     text = text.splitlines()[0].strip() if text else ""
-    text = re.sub(r"^(?:请|帮我|请帮我|麻烦|需要|生成|做一份|做|分析|关于)+", "", text).strip()
+    text = re.sub(r"^(?:please|help me|please help me|need|generate|create|analyze|about)+", "", text).strip()
     text = re.sub(
-        r"(?:的)?(?:竞品分析报告|竞品对比报告|竞品分析|竞品对比|类似产品横向对比报告|横向对比报告|横向对比|类似产品|对比报告|分析报告|报告|推荐)$",
+        r"(?:competitor analysis report|competitor comparison report|competitor analysis|competitor comparison|similar product cross-comparison report|cross-product comparison report|cross-product comparison|analysis report|report|recommendation)$",
         "",
         text,
-    ).strip(" ，,。；;：:")
+        flags=re.I,
+    ).strip(" ,;:")
     return text[:42].strip()
 
 
@@ -2309,12 +2310,12 @@ def quality_source_report_path(quality_path: Path, data: dict[str, Any]) -> Path
 
 def report_type_label(report_type: str) -> str:
     if report_type == "quality":
-        return "质检报告"
+        return "QAReport"
     if report_type == "final":
-        return "最终报告"
+        return "Final report"
     if report_type == "report_agent":
-        return "分析总报告"
-    return "单品报告"
+        return "Analysis summary"
+    return "Product report"
 
 
 def count_issue_lines(text: str) -> int:
@@ -2322,12 +2323,12 @@ def count_issue_lines(text: str) -> int:
     issue_block = False
     for line in text.splitlines():
         stripped = line.strip()
-        if re.match(r"^#{1,4}\s+.*(issue|问题|风险|缺口|不足|待修复)", stripped, re.I):
+        if re.match(r"^#{1,4}\s+.*(issue|Question|risk|gap|shortcoming|to fix)", stripped, re.I):
             issue_block = True
             continue
         if issue_block and stripped.startswith("#"):
             issue_block = False
-        if not issue_block and not re.search(r"(issue|问题|风险|缺口|不足|待修复)", stripped, re.I):
+        if not issue_block and not re.search(r"(issue|Question|risk|gap|shortcoming|to fix)", stripped, re.I):
             continue
         if stripped.startswith(("-", "*")) or re.match(r"^\d+[.)、]\s+", stripped):
             count += 1
@@ -2344,12 +2345,12 @@ def extract_issues(text: str) -> list[dict[str, Any]]:
         heading = re.match(r"^(#{1,6})\s+(.+)$", stripped)
         if heading:
             current_section = heading.group(2).strip()
-        if re.match(r"^#{1,4}\s+.*(issue|问题|风险|缺口|不足|待修复)", stripped, re.I):
+        if re.match(r"^#{1,4}\s+.*(issue|Question|risk|gap|shortcoming|to fix)", stripped, re.I):
             issue_block = True
             continue
         if issue_block and stripped.startswith("#"):
             issue_block = False
-        if not issue_block and not re.search(r"(issue|问题|风险|缺口|不足|待修复)", stripped, re.I):
+        if not issue_block and not re.search(r"(issue|Question|risk|gap|shortcoming|to fix)", stripped, re.I):
             continue
         if stripped.startswith(("-", "*")) or re.match(r"^\d+[.)、]\s+", stripped):
             normalized = re.sub(r"^[-*\d.)、\s]+", "", stripped)
@@ -2379,9 +2380,9 @@ def issue_to_payload(
 ) -> dict[str, Any]:
     severity = "medium"
     lowered = value.lower()
-    if any(token in lowered for token in ("critical", "严重", "高风险", "major")):
+    if any(token in lowered for token in ("critical", "high risk", "major")):
         severity = "high"
-    elif any(token in lowered for token in ("minor", "轻微", "low")):
+    elif any(token in lowered for token in ("minor", "minor", "low")):
         severity = "low"
     parts = split_issue_parts(value)
     return {
@@ -2399,12 +2400,12 @@ def issue_to_payload(
 
 def split_issue_parts(value: str) -> dict[str, str]:
     markers = {
-        "evidence": r"(?:证据|来源参考点|来源|参考点)[:：]\s*",
-        "suggestion": r"(?:建议修正|修复要求|建议|运营动作|对\s*PM\s*的启发|对PM的启发)[:：]\s*",
-        "reason": r"(?:原因|为什么重要|风险|影响)[:：]\s*",
+        "evidence": r"(?:Evidence|source references|source|References)[:：]\s*",
+        "suggestion": r"(?:suggested fix|fix requirement|Suggestion|operational action|PM takeaway)[:：]\s*",
+        "reason": r"(?:Reason|why it matters|risk|impact)[:：]\s*",
     }
     first_marker = re.search(
-        r"(?:证据|来源参考点|来源|参考点|建议修正|修复要求|建议|运营动作|对\s*PM\s*的启发|对PM的启发|原因|为什么重要|风险|影响)[:：]",
+        r"(?:Evidence|source references|source|References|suggested fix|fix requirement|Suggestion|operational action|PM takeaway|Reason|why it matters|risk|impact)[:：]",
         value,
     )
     title = value[: first_marker.start()].strip(" ；;，,。") if first_marker else value
@@ -2416,7 +2417,7 @@ def split_issue_parts(value: str) -> dict[str, str]:
             return ""
         rest = value[match.end() :]
         next_match = re.search(
-            r"\s+(?:证据|来源参考点|来源|参考点|建议修正|修复要求|建议|运营动作|对\s*PM\s*的启发|对PM的启发|原因|为什么重要|风险|影响)[:：]",
+            r"\s+(?:Evidence|source references|source|References|suggested fix|fix requirement|Suggestion|operational action|PM takeaway|Reason|why it matters|risk|impact)[:：]",
             rest,
         )
         return rest[: next_match.start()].strip(" ；;，,。") if next_match else rest.strip()

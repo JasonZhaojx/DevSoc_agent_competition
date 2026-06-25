@@ -262,7 +262,7 @@ async function startJob() {
   const description = productDescription.value.trim();
   if (!description) {
     productDescription.focus();
-    showToast("请输入产品需求", "error");
+    showToast("Enter a product brief", "error");
     return;
   }
   if (isSubmitting) return;
@@ -311,12 +311,12 @@ async function startJob() {
     });
     currentJobId = job.job_id;
     renderJob(job);
-    showToast("任务已启动，正在执行主流程", "success");
+    showToast("Job started; running the main workflow", "success");
     pollJob();
   } catch (error) {
     serverStatus.textContent = "Error";
     logBox.textContent = String(error);
-    showToast("启动失败: " + error.message, "error");
+    showToast("Failed to start: " + error.message, "error");
     setStartButtonLoading(false);
     updateTerminateButton(null);
     updateAgentLogMeta(null);
@@ -327,7 +327,7 @@ function setStartButtonLoading(loading) {
   isSubmitting = loading;
   startBtn.disabled = loading;
   startBtn.classList.toggle("loading", loading);
-  startBtn.innerHTML = loading ? "<span>分析中...</span>" : "<span>开始分析</span>";
+  startBtn.innerHTML = loading ? "<span>Analyzing...</span>" : "<span>Start analysis</span>";
 }
 
 async function handleRefresh() {
@@ -370,16 +370,16 @@ async function pollJob() {
     setStartButtonLoading(false);
 
     if (job.status === "completed") {
-      showToast("任务完成，报告已生成", "success");
+      showToast("Job complete; report generated", "success");
     } else if (job.status === "failed") {
-      showToast("任务失败，请查看 Agent 决策回放", "error");
+      showToast("Job failed. Check the agent decision replay.", "error");
     } else if (job.status === "terminated") {
-      showToast("工作流已终止", "warning");
+      showToast("Workflow terminated", "warning");
     }
   } catch (error) {
     clearTimeout(pollTimer);
     setStartButtonLoading(false);
-    showToast("获取任务状态失败: " + error.message, "error");
+    showToast("Failed to fetch job status: " + error.message, "error");
   }
 }
 
@@ -389,20 +389,20 @@ function isJobActive(job) {
 
 async function terminateCurrentJob() {
   if (!currentJobId || !terminateBtn) return;
-  if (!window.confirm("确定要终止当前工作流吗？")) return;
+  if (!window.confirm("Terminate the current workflow?")) return;
   terminateBtn.disabled = true;
-  terminateBtn.textContent = "终止中";
+  terminateBtn.textContent = "Terminating";
   try {
     const job = await api(`/api/jobs/${currentJobId}/terminate`, {
       method: "POST",
       body: "{}",
     });
     renderJob(job);
-    showToast("已发送终止信号", "warning");
+    showToast("Terminate signal sent", "warning");
     clearTimeout(pollTimer);
     pollTimer = setTimeout(pollJob, 1000);
   } catch (error) {
-    showToast("终止失败: " + error.message, "error");
+    showToast("Failed to terminate: " + error.message, "error");
     if (currentJobId) {
       try {
         renderJob(await api(`/api/jobs/${currentJobId}`));
@@ -417,9 +417,9 @@ function renderJob(job) {
   serverStatus.textContent = job.status;
   jobStatus.textContent = job.status;
   const desc = job.product_description || "";
-  jobMeta.textContent = desc.length > 46 ? desc.slice(0, 46) + "..." : desc || "尚未启动任务";
-  reportName.textContent = job.report_name || "生成中";
-  logBox.textContent = (job.logs || []).join("\n") || "等待任务日志...";
+  jobMeta.textContent = desc.length > 46 ? desc.slice(0, 46) + "..." : desc || "No job started";
+  reportName.textContent = job.report_name || "Generating";
+  logBox.textContent = (job.logs || []).join("\n") || "Waiting for job logs...";
   logBox.scrollTop = logBox.scrollHeight;
   updateTerminateButton(job);
   updateAgentLogMeta(job);
@@ -438,17 +438,17 @@ function updateTerminateButton(job) {
   if (!terminateBtn) return;
   const active = isJobActive(job);
   terminateBtn.disabled = !active || job?.status === "terminating";
-  terminateBtn.textContent = job?.status === "terminating" ? "终止中" : "终止";
+  terminateBtn.textContent = job?.status === "terminating" ? "Terminating" : "Terminate";
 }
 
 function updateAgentLogMeta(job) {
   if (!agentLogMeta && !agentLogInlineMeta) return;
   const lineCount = (job?.logs || []).length;
-  const statusText = job ? stageLabel(job.status) : "尚未启动";
+  const statusText = job ? stageLabel(job.status) : "Not started";
   const pidText = job?.process_pid ? `PID ${job.process_pid}` : "PID -";
   const meta = job
-    ? `${statusText} · ${pidText} · ${lineCount} 行日志`
-    : "等待任务日志...";
+    ? `${statusText} · ${pidText} · ${lineCount} log lines`
+    : "Waiting for job logs...";
   if (agentLogMeta) agentLogMeta.textContent = meta;
   if (agentLogInlineMeta) agentLogInlineMeta.textContent = meta;
 }
@@ -477,11 +477,11 @@ function showWizardStep(step) {
   });
   if (prevStepBtn) prevStepBtn.disabled = currentWizardStep === 1;
   if (nextStepBtn) nextStepBtn.disabled = currentWizardStep === 4;
-  if (wizardStepMeta) wizardStepMeta.textContent = `步骤 ${currentWizardStep} / 4`;
+  if (wizardStepMeta) wizardStepMeta.textContent = `Step ${currentWizardStep} / 4`;
 }
 
 function renderRuntimeState(job) {
-  threadName.textContent = job.thread_name || (job.thread_alive ? "queued" : "未启动");
+  threadName.textContent = job.thread_name || (job.thread_alive ? "queued" : "Not started");
   processPid.textContent = job.process_pid || "-";
   idleSeconds.textContent =
     typeof job.idle_seconds === "number" ? `${job.idle_seconds}s` : "-";
@@ -490,7 +490,7 @@ function renderRuntimeState(job) {
     `pid=${job.process_pid || "-"} started=${formatTimestamp(job.started_at)} finished=${formatTimestamp(job.finished_at)}`,
     ...(job.runtime_logs || []),
   ];
-  runtimeLogBox.textContent = runtimeLines.join("\n") || "等待主线程事件...";
+  runtimeLogBox.textContent = runtimeLines.join("\n") || "Waiting for main thread events...";
   runtimeLogBox.scrollTop = runtimeLogBox.scrollHeight;
 }
 
@@ -503,7 +503,7 @@ function renderSubtasks(job) {
   if (queries.length) {
     chunks.push(`
       <div class="subtask-group">
-        <span>搜索词 ${queries.length}</span>
+        <span>Search queries ${queries.length}</span>
         ${queries.map((query) => `<p>${escapeHtml(query)}</p>`).join("")}
       </div>
     `);
@@ -511,7 +511,7 @@ function renderSubtasks(job) {
   if (candidates.length) {
     chunks.push(`
       <div class="subtask-group">
-        <span>候选产品 ${candidates.length}</span>
+        <span>Candidates ${candidates.length}</span>
         ${candidates.map((name) => `<p>${escapeHtml(name)}</p>`).join("")}
       </div>
     `);
@@ -519,7 +519,7 @@ function renderSubtasks(job) {
   if (subtasks.length) {
     chunks.push(`
       <div class="subtask-group">
-        <span>分析子任务 ${subtasks.length}</span>
+        <span>Analysis subtasks ${subtasks.length}</span>
         ${subtasks
           .map(
             (task) => `
@@ -536,9 +536,9 @@ function renderSubtasks(job) {
 
   subtaskMeta.textContent =
     queries.length || candidates.length || subtasks.length
-      ? `${queries.length} 搜索词 · ${candidates.length} 候选 · ${subtasks.length} 子任务`
-      : "等待搜索";
-  subtaskList.innerHTML = chunks.join("") || `<div class="subtask-empty">等待主流程输出搜索词和候选产品。</div>`;
+      ? `${queries.length} search queries · ${candidates.length} candidates · ${subtasks.length} subtasks`
+      : "Waiting for search";
+  subtaskList.innerHTML = chunks.join("") || `<div class="subtask-empty">Waiting for the main workflow to output search queries and candidate products.</div>`;
 }
 
 function maybeOpenProductSelection(job) {
@@ -570,7 +570,7 @@ function openProductSelectionPanel(job) {
           `
         )
         .join("")
-    : `<div class="issue-empty">还没有候选产品。可以先手动填写要分析的产品名。</div>`;
+    : `<div class="issue-empty">No candidate products yet. You can manually add product names to analyze.</div>`;
   updateProductSelectionButton();
   candidateProductList.querySelectorAll("input[type='checkbox']").forEach((input) => {
     input.addEventListener("change", updateProductSelectionButton);
@@ -602,7 +602,7 @@ async function submitProductSelection() {
   if (!currentJobId || !submitProductSelectionBtn) return;
   const products = selectedProductNames();
   if (!products.length) {
-    showToast("请至少选择或手动添加一个产品", "warning");
+    showToast("Select or manually add at least one product", "warning");
     return;
   }
   submitProductSelectionBtn.disabled = true;
@@ -613,23 +613,23 @@ async function submitProductSelection() {
     });
     closeProductSelectionPanel();
     renderJob(job);
-    showToast("产品选择已提交，继续分析", "success");
+    showToast("Product selection submitted; continuing analysis", "success");
     clearTimeout(pollTimer);
     pollTimer = setTimeout(pollJob, 800);
   } catch (error) {
-    showToast("提交产品选择失败: " + error.message, "error");
+    showToast("Failed to submit product selection: " + error.message, "error");
     updateProductSelectionButton();
   }
 }
 
 function subtaskStatusLabel(status) {
   return {
-    queued: "排队",
-    running: "运行中",
-    done: "完成",
-    failed: "失败",
-    terminated: "已终止",
-  }[status] || status || "排队";
+    queued: "Queued",
+    running: "Running",
+    done: "Done",
+    failed: "Failed",
+    terminated: "Terminated",
+  }[status] || status || "Queued";
 }
 
 function renderNodeFlow(job) {
@@ -656,30 +656,30 @@ function inferStage(job) {
   if (job.status === "completed") return "done";
   if (job.status === "terminated") return job.stage || "prepare";
   const logs = (job.logs || []).join("\n");
-  if (/总总结已保存|Markdown 已保存|最终报告通过质检|达到最大迭代次数/.test(logs)) return "done";
-  if (/Quality Agent 质检|最终报告质检闭环|\[quality-loop\]/.test(logs)) return "quality";
-  if (/生成所选产品大总结|FINAL COMPARISON|横向对比/.test(logs)) return "summarize";
-  if (/等待所选产品分析报告完成|启动独立命令行窗口分析|将要分析的产品|分析窗口已经启动/.test(logs)) return "analyze";
-  if (/请选择|\[web-input\] 产品选择/.test(logs)) return "select";
-  if (/LLM 改写后的搜索词|搜索到的产品|rewrite search queries|find_product_names/.test(logs)) return "discover";
+  if (/summary saved|Markdown saved|final report passed QA|reached max iterations/.test(logs)) return "done";
+  if (/Quality Agent QA|Final reportQA loop|\[quality-loop\]/.test(logs)) return "quality";
+  if (/generate selected product summary|FINAL COMPARISON|cross-product comparison/.test(logs)) return "summarize";
+  if (/waiting for selected product analysis report completion|started independent analysis process|products to analyze|analysis process started/.test(logs)) return "analyze";
+  if (/please select|\[web-input\] product selection/.test(logs)) return "select";
+  if (/LLM rewritten search queries|discovered products|rewrite search queries|find_product_names/.test(logs)) return "discover";
   return "prepare";
 }
 
 function stageLabel(value) {
   return {
-    prepare: "准备输入",
-    discover: "搜索发现",
-    select: "等待/应用人工选择",
-    analyze: "分块阅读与分析",
-    summarize: "横向总结",
-    quality: "质检闭环",
-    done: "完成",
-    running: "运行中",
-    queued: "排队中",
-    terminating: "终止中",
-    terminated: "已终止",
-    completed: "完成",
-    failed: "失败",
+    prepare: "Prepare input",
+    discover: "Search discovery",
+    select: "Waiting/applying manual selection",
+    analyze: "Chunk reading and analysis",
+    summarize: "Cross-product summary",
+    quality: "QA loop",
+    done: "Done",
+    running: "Running",
+    queued: "Queued",
+    terminating: "Terminating",
+    terminated: "Terminated",
+    completed: "Done",
+    failed: "Failed",
   }[value] || value;
 }
 
@@ -692,7 +692,7 @@ async function loadReports(options = {}) {
     reportSelect.innerHTML = "";
 
     if (!allReportsCache.length) {
-      reportSelect.appendChild(new Option("暂无报告", ""));
+      reportSelect.appendChild(new Option("No reports", ""));
       renderSummary(null);
       renderIssues([]);
       setDownload("");
@@ -718,10 +718,10 @@ async function loadReports(options = {}) {
     if (document.querySelector('[data-page-panel="quality"]')?.classList.contains("active")) {
       loadQualityIssues();
     } else if (qualityIssueList) {
-      qualityIssueList.innerHTML = `<div class="issue-empty">进入本页后再加载 Issue 明细，避免工作台初始化卡顿。</div>`;
+      qualityIssueList.innerHTML = `<div class="issue-empty">Issue details load when this page opens to avoid slowing workspace initialization.</div>`;
     }
   } catch (error) {
-    showToast("加载报告列表失败: " + error.message, "error");
+    showToast("Failed to load report list: " + error.message, "error");
   }
 }
 
@@ -735,7 +735,7 @@ function compareReports(a, b) {
 function renderReportLibrary(reports) {
   if (!reportLibrary) return;
   if (!reports.length) {
-    reportLibrary.innerHTML = `<div class="report-empty"><p>暂无报告</p><span>开始分析后会在这里展示。</span></div>`;
+    reportLibrary.innerHTML = `<div class="report-empty"><p>No reports</p><span>Reports appear here after analysis starts.</span></div>`;
     return;
   }
 
@@ -743,7 +743,7 @@ function renderReportLibrary(reports) {
   reportLibrary.innerHTML = groups
     .map((group) => {
       const tags = summarizeTaskTags(group.reports);
-      const date = new Date(group.modifiedAt * 1000).toLocaleString("zh-CN");
+      const date = new Date(group.modifiedAt * 1000).toLocaleString("en-US");
       return `
         <section class="report-folder report-folder-card">
           <div class="report-folder-header">
@@ -751,12 +751,12 @@ function renderReportLibrary(reports) {
               <h3 title="${escapeHtml(group.displayTitle)}">${escapeHtml(group.displayTitle)}</h3>
               <time>${escapeHtml(group.taskId)} · ${date}</time>
             </div>
-            <span class="report-tag">${group.reports.length} 个文件</span>
+            <span class="report-tag">${group.reports.length} files</span>
           </div>
           <div class="report-meta">${tags.map((tag) => `<span class="report-tag">${escapeHtml(tag)}</span>`).join("")}</div>
           <div class="report-card-footer">
-            <span class="report-tag">任务文件夹</span>
-            <button class="btn btn-ghost btn-sm" data-task="${escapeHtml(group.taskId)}">打开文件夹</button>
+            <span class="report-tag">Task folder</span>
+            <button class="btn btn-ghost btn-sm" data-task="${escapeHtml(group.taskId)}">Open folder</button>
           </div>
         </section>
       `;
@@ -777,10 +777,10 @@ function renderReportFolderFiles(taskId) {
   reportLibrary.innerHTML = `
     <section class="report-file-page">
       <div class="report-file-page-header">
-        <button class="btn btn-ghost btn-sm" data-back-folders type="button">返回文件夹</button>
+        <button class="btn btn-ghost btn-sm" data-back-folders type="button">Back to folders</button>
         <div>
           <h3 title="${escapeHtml(group.displayTitle)}">${escapeHtml(group.displayTitle)}</h3>
-          <p>${escapeHtml(group.taskId)} · ${reports.length} 个报告文件，点击文件在右侧预览。</p>
+          <p>${escapeHtml(group.taskId)} · ${reports.length} report files. Click a file to preview it on the right.</p>
         </div>
       </div>
       <div class="report-file-list">
@@ -806,9 +806,9 @@ function renderReportRow(report) {
         <small>${escapeHtml(report.name)}</small>
       </div>
       <div class="report-file-actions">
-        <span class="report-tag">参考点 ${summary.reference_count || 0}</span>
+        <span class="report-tag">References ${summary.reference_count || 0}</span>
         <span class="report-tag">Issue ${summary.issue_count || 0}</span>
-        <button class="btn btn-ghost btn-sm" data-report="${escapeHtml(report.name)}">查看</button>
+        <button class="btn btn-ghost btn-sm" data-report="${escapeHtml(report.name)}">View</button>
       </div>
     </div>
   `;
@@ -827,17 +827,17 @@ async function loadQuestionnaires(options = {}) {
       await previewQuestionnaireFile(questionnaireFilesCache[0].name);
     }
   } catch (error) {
-    questionnaireFileList.innerHTML = `<div class="issue-empty">问卷文件加载失败：${escapeHtml(error.message)}</div>`;
-    showToast("问卷文件加载失败: " + error.message, "error");
+    questionnaireFileList.innerHTML = `<div class="issue-empty">Failed to load questionnaire files: ${escapeHtml(error.message)}</div>`;
+    showToast("Failed to load questionnaire files: " + error.message, "error");
   }
 }
 
 function renderQuestionnaireFileOptions() {
   const questionnaires = questionnaireFilesByKind("questionnaire");
   const responses = questionnaireFilesByKind("response_jsonl");
-  fillQuestionnaireSelect(simulateQuestionnaireSelect, questionnaires, "暂无问卷文件");
-  fillQuestionnaireSelect(analysisQuestionnaireSelect, questionnaires, "暂无问卷文件");
-  fillQuestionnaireSelect(analysisResponsesSelect, responses, "暂无回答 JSONL");
+  fillQuestionnaireSelect(simulateQuestionnaireSelect, questionnaires, "NoneQuestionnaire file");
+  fillQuestionnaireSelect(analysisQuestionnaireSelect, questionnaires, "NoneQuestionnaire file");
+  fillQuestionnaireSelect(analysisResponsesSelect, responses, "NoneResponse JSONL");
 }
 
 function fillQuestionnaireSelect(select, files, emptyLabel) {
@@ -849,7 +849,7 @@ function fillQuestionnaireSelect(select, files, emptyLabel) {
     return;
   }
   for (const file of files) {
-    const count = file.record_count ? ` · ${file.record_count} 条` : "";
+    const count = file.record_count ? ` · ${file.record_count} records` : "";
     select.appendChild(new Option(`${file.kind_label} · ${file.title}${count}`, file.name));
   }
   if (previous && files.some((file) => file.name === previous)) {
@@ -860,7 +860,7 @@ function fillQuestionnaireSelect(select, files, emptyLabel) {
 function renderQuestionnaireFileList() {
   if (!questionnaireFileList) return;
   if (!questionnaireFilesCache.length) {
-    questionnaireFileList.innerHTML = `<div class="issue-empty">暂无本地问卷文件。</div>`;
+    questionnaireFileList.innerHTML = `<div class="issue-empty">NoneLocal questionnaire files。</div>`;
     renderQuestionnairePreview(null);
     return;
   }
@@ -871,7 +871,7 @@ function renderQuestionnaireFileList() {
         <button class="questionnaire-file-row ${active}" data-questionnaire-file="${escapeHtml(file.name)}" type="button">
           <span>${escapeHtml(file.kind_label)}</span>
           <strong>${escapeHtml(file.title || file.name)}</strong>
-          <small>${escapeHtml(file.name)} · ${formatSize(file.size || 0)}${file.record_count ? " · " + file.record_count + " 条" : ""}</small>
+          <small>${escapeHtml(file.name)} · ${formatSize(file.size || 0)}${file.record_count ? " · " + file.record_count + " records" : ""}</small>
         </button>
       `;
     })
@@ -892,11 +892,11 @@ async function generateQuestionnaire() {
   const description = questionnaireProductDescription?.value.trim() || "";
   if (!description) {
     questionnaireProductDescription?.focus();
-    showToast("请输入产品/竞品方向", "error");
+    showToast("Enter a product / competitor direction", "error");
     return;
   }
-  setQuestionnaireBusy(true, generateQuestionnaireBtn, "生成中...");
-  if (questionnaireGenerateStatus) questionnaireGenerateStatus.textContent = "生成中：搜索竞品并设计问卷";
+  setQuestionnaireBusy(true, generateQuestionnaireBtn, "Generating...");
+  if (questionnaireGenerateStatus) questionnaireGenerateStatus.textContent = "Generating: searching competitors and designing questionnaire";
   try {
     const data = await api("/api/questionnaires/generate", {
       method: "POST",
@@ -914,16 +914,16 @@ async function generateQuestionnaire() {
     renderQuestionnaireFileOptions();
     renderQuestionnaireFileList();
     if (questionnaireGenerateStatus) {
-      const competitors = (data.competitors || []).slice(0, 8).join("、") || "未抽取到明确竞品";
-      questionnaireGenerateStatus.textContent = `已生成 ${data.items?.length || 0} 题：${data.questionnaire?.name || ""}；竞品：${competitors}`;
+      const competitors = (data.competitors || []).slice(0, 8).join("、") || "No clear competitors extracted";
+      questionnaireGenerateStatus.textContent = `Generated ${data.items?.length || 0} questions: ${data.questionnaire?.name || ""} | competitors: ${competitors}`;
     }
-    showToast("问卷已生成", "success");
+    showToast("Questionnaire generated", "success");
     await previewQuestionnaireFile(data.questionnaire?.name);
   } catch (error) {
-    if (questionnaireGenerateStatus) questionnaireGenerateStatus.textContent = `生成失败：${error.message}`;
-    showToast("问卷生成失败: " + error.message, "error");
+    if (questionnaireGenerateStatus) questionnaireGenerateStatus.textContent = `Generation failed: ${error.message}`;
+    showToast("Failed to generate questionnaire: " + error.message, "error");
   } finally {
-    setQuestionnaireBusy(false, generateQuestionnaireBtn, "生成问卷");
+    setQuestionnaireBusy(false, generateQuestionnaireBtn, "Generate questionnaire");
   }
 }
 
@@ -931,11 +931,11 @@ async function simulateQuestionnaire() {
   if (questionnaireBusy) return;
   const questionnaireName = simulateQuestionnaireSelect?.value || "";
   if (!questionnaireName) {
-    showToast("请选择问卷文件", "error");
+    showToast("Select a questionnaire file", "error");
     return;
   }
-  setQuestionnaireBusy(true, simulateQuestionnaireBtn, "生成中...");
-  if (questionnaireSimulateStatus) questionnaireSimulateStatus.textContent = "生成中：AI 模拟填写仅作为快速测试使用";
+  setQuestionnaireBusy(true, simulateQuestionnaireBtn, "Generating...");
+  if (questionnaireSimulateStatus) questionnaireSimulateStatus.textContent = "Generating: AI simulated responses are for quick testing only";
   try {
     const data = await api("/api/questionnaires/simulate", {
       method: "POST",
@@ -952,15 +952,15 @@ async function simulateQuestionnaire() {
     renderQuestionnaireFileOptions();
     renderQuestionnaireFileList();
     if (questionnaireSimulateStatus) {
-      questionnaireSimulateStatus.textContent = `已生成 ${data.response_count || 0} 份：${data.response_jsonl?.name || ""}；CSV：${data.response_csv?.name || ""}`;
+      questionnaireSimulateStatus.textContent = `Generated ${data.response_count || 0} responses: ${data.response_jsonl?.name || ""} | CSV: ${data.response_csv?.name || ""}`;
     }
-    showToast("模拟回答已生成", "success");
+    showToast("Simulated responses generated", "success");
     await previewQuestionnaireFile(data.response_jsonl?.name);
   } catch (error) {
-    if (questionnaireSimulateStatus) questionnaireSimulateStatus.textContent = `模拟失败：${error.message}`;
-    showToast("模拟填写失败: " + error.message, "error");
+    if (questionnaireSimulateStatus) questionnaireSimulateStatus.textContent = `Simulation failed: ${error.message}`;
+    showToast("Failed to simulate responses: " + error.message, "error");
   } finally {
-    setQuestionnaireBusy(false, simulateQuestionnaireBtn, "生成模拟回答");
+    setQuestionnaireBusy(false, simulateQuestionnaireBtn, "Generate simulated responses");
   }
 }
 
@@ -969,11 +969,11 @@ async function analyzeQuestionnaire() {
   const questionnaireName = analysisQuestionnaireSelect?.value || "";
   const responsesName = analysisResponsesSelect?.value || "";
   if (!questionnaireName || !responsesName) {
-    showToast("请选择问卷文件和回答 JSONL", "error");
+    showToast("Select a questionnaire file and response JSONL", "error");
     return;
   }
-  setQuestionnaireBusy(true, analyzeQuestionnaireBtn, "分析中...");
-  if (questionnaireAnalysisStatus) questionnaireAnalysisStatus.textContent = "分析中：统计回答并生成 Markdown 报告";
+  setQuestionnaireBusy(true, analyzeQuestionnaireBtn, "Analyzing...");
+  if (questionnaireAnalysisStatus) questionnaireAnalysisStatus.textContent = "Analyzing: summarizing responses and generating a Markdown report";
   try {
     const data = await api("/api/questionnaires/analyze", {
       method: "POST",
@@ -988,15 +988,15 @@ async function analyzeQuestionnaire() {
     renderQuestionnaireFileOptions();
     renderQuestionnaireFileList();
     if (questionnaireAnalysisStatus) {
-      questionnaireAnalysisStatus.textContent = `已生成分析报告：${data.analysis?.name || ""}`;
+      questionnaireAnalysisStatus.textContent = `Generated analysis report: ${data.analysis?.name || ""}`;
     }
-    showToast("问卷分析已生成", "success");
+    showToast("Questionnaire analysis generated", "success");
     await previewQuestionnaireFile(data.analysis?.name, data.analysis_markdown || "");
   } catch (error) {
-    if (questionnaireAnalysisStatus) questionnaireAnalysisStatus.textContent = `分析失败：${error.message}`;
-    showToast("问卷分析失败: " + error.message, "error");
+    if (questionnaireAnalysisStatus) questionnaireAnalysisStatus.textContent = `AnalyzeFailed：${error.message}`;
+    showToast("Analyze questionnaireFailed: " + error.message, "error");
   } finally {
-    setQuestionnaireBusy(false, analyzeQuestionnaireBtn, "分析问卷");
+    setQuestionnaireBusy(false, analyzeQuestionnaireBtn, "Analyze questionnaire");
   }
 }
 
@@ -1013,20 +1013,20 @@ async function previewQuestionnaireFile(name, suppliedMarkdown = "") {
       : await api(`/api/questionnaires/file/${encodeURIComponent(name)}`);
     renderQuestionnairePreview({ file: data.file || file, content: data.content || "" });
   } catch (error) {
-    renderQuestionnairePreview({ file, content: `预览失败：${error.message}`, error: true });
+    renderQuestionnairePreview({ file, content: `Preview failed: ${error.message}`, error: true });
   }
 }
 
 function renderQuestionnairePreview(state) {
   if (!questionnaireResultMeta || !questionnaireResultPreview) return;
   if (!state) {
-    questionnaireResultMeta.innerHTML = `<strong>未选择文件</strong><span>生成、模拟或分析后会在这里预览。</span>`;
-    questionnaireResultPreview.innerHTML = `<div class="empty-state"><p>暂无预览</p><span>请选择一个本地问卷文件。</span></div>`;
+    questionnaireResultMeta.innerHTML = `<strong>No file selected</strong><span>Generated, simulated, or analyzed files preview here.</span>`;
+    questionnaireResultPreview.innerHTML = `<div class="empty-state"><p>No preview</p><span>Select a local questionnaire file.</span></div>`;
     return;
   }
   const file = state.file || {};
   questionnaireResultMeta.innerHTML = `
-    <strong>${escapeHtml(file.title || file.name || "问卷文件")}</strong>
+    <strong>${escapeHtml(file.title || file.name || "Questionnaire file")}</strong>
     <span>${escapeHtml(file.kind_label || "")} · ${escapeHtml(file.name || "")} · ${formatSize(file.size || 0)}</span>
   `;
   if (state.loading) {
@@ -1058,13 +1058,13 @@ function renderJsonlPreview(content) {
         return line;
       }
     });
-  if (!rows.length) return `<div class="issue-empty">文件为空。</div>`;
+  if (!rows.length) return `<div class="issue-empty">File is empty.</div>`;
   return `<pre><code>${escapeHtml(rows.join("\n\n"))}</code></pre>`;
 }
 
 function renderPlainPreview(content) {
   const preview = String(content || "").slice(0, 20000);
-  return preview ? `<pre><code>${escapeHtml(preview)}</code></pre>` : `<div class="issue-empty">文件为空。</div>`;
+  return preview ? `<pre><code>${escapeHtml(preview)}</code></pre>` : `<div class="issue-empty">File is empty.</div>`;
 }
 
 function showQuestionnaireTab(tab) {
@@ -1107,12 +1107,12 @@ function renderSkillReportOptions() {
   const skillReportGroups = skillBuildReportGroups();
   skillReportSelect.innerHTML = "";
   if (!skillReportGroups.length) {
-    skillReportSelect.appendChild(new Option("暂无可生成 Skill 的报告（需最终报告+分析总报告）", ""));
+    skillReportSelect.appendChild(new Option("No eligible report package (requires final report + analysis summary)", ""));
     updateSkillNameDefault(true);
     return;
   }
   for (const group of skillReportGroups) {
-    const label = `报告包 · ${group.displayTitle}（最终报告+分析总报告）`;
+    const label = `Report package - ${group.displayTitle} (final report + analysis summary)`;
     const option = new Option(label, group.agentReport.name);
     option.dataset.taskId = group.taskId;
     skillReportSelect.appendChild(option);
@@ -1181,15 +1181,15 @@ async function loadSkillWikis(preferredId = "", options = {}) {
       renderSkillDetail(null);
     }
   } catch (error) {
-    skillWikiList.innerHTML = `<div class="issue-empty">Skill 加载失败：${escapeHtml(error.message)}</div>`;
-    showToast("Skill 加载失败: " + error.message, "error");
+    skillWikiList.innerHTML = `<div class="issue-empty">Failed to load Skills: ${escapeHtml(error.message)}</div>`;
+    showToast("Failed to load Skills: " + error.message, "error");
   }
 }
 
 function renderSkillWikiList() {
   if (!skillWikiList) return;
   if (!skillWikisCache.length) {
-    skillWikiList.innerHTML = `<div class="issue-empty">暂无本地 Skill。</div>`;
+    skillWikiList.innerHTML = `<div class="issue-empty">No local Skills.</div>`;
     return;
   }
   skillWikiList.innerHTML = skillWikisCache
@@ -1198,7 +1198,7 @@ function renderSkillWikiList() {
         <button class="skill-wiki-row ${skill.id === currentSkillWikiId ? "active" : ""}" data-skill-id="${escapeHtml(skill.id)}" type="button">
           <span>${escapeHtml(skill.name || skill.id)}</span>
           <strong>${escapeHtml(skill.source_report || skill.relative_path || "")}</strong>
-          <small>${skill.file_count || 0} 个文件 · ${new Date((skill.modified_at || 0) * 1000).toLocaleString("zh-CN")}</small>
+          <small>${skill.file_count || 0} files · ${new Date((skill.modified_at || 0) * 1000).toLocaleString("en-US")}</small>
         </button>
       `
     )
@@ -1214,12 +1214,12 @@ async function buildSkillWiki() {
   const group = findSkillReportGroupBySelection(reportName);
   const taskId = group?.taskId || skillReportSelect?.selectedOptions?.[0]?.dataset?.taskId || inferTaskId(reportName);
   if (!reportName || !taskId) {
-    showToast("请选择本地报告", "error");
+    showToast("Select a local report", "error");
     return;
   }
   skillBuildBusy = true;
   setSkillBuildLoading(true);
-  if (skillBuildStatus) skillBuildStatus.textContent = "生成中";
+  if (skillBuildStatus) skillBuildStatus.textContent = "Generating";
   try {
     const payload = {
       task_id: taskId,
@@ -1234,14 +1234,14 @@ async function buildSkillWiki() {
     });
     const skill = data.skill;
     if (skillBuildStatus) {
-      skillBuildStatus.textContent = `已保存：${skill?.relative_path || skill?.id || ""}`;
+      skillBuildStatus.textContent = `Saved: ${skill?.relative_path || skill?.id || ""}`;
     }
-    showToast("Skill 已生成", "success");
+    showToast("Skill generated", "success");
     currentSkillWikiId = skill?.id || "";
     await loadSkillWikis(currentSkillWikiId, { force: true });
   } catch (error) {
-    if (skillBuildStatus) skillBuildStatus.textContent = `生成失败：${error.message}`;
-    showToast("Skill 生成失败: " + error.message, "error");
+    if (skillBuildStatus) skillBuildStatus.textContent = `Generation failed: ${error.message}`;
+    showToast("Failed to generate Skill: " + error.message, "error");
   } finally {
     skillBuildBusy = false;
     setSkillBuildLoading(false);
@@ -1251,7 +1251,7 @@ async function buildSkillWiki() {
 function setSkillBuildLoading(value) {
   if (!buildSkillBtn) return;
   buildSkillBtn.disabled = value;
-  buildSkillBtn.textContent = value ? "生成中..." : "生成并保存";
+  buildSkillBtn.textContent = value ? "Generating..." : "Build and save";
 }
 
 async function selectSkillWiki(skillId) {
@@ -1268,19 +1268,19 @@ async function selectSkillWiki(skillId) {
     renderSkillDetail(skill);
   } catch (error) {
     renderSkillDetail(null);
-    showToast("Skill 详情加载失败: " + error.message, "error");
+    showToast("Failed to load Skill details: " + error.message, "error");
   }
 }
 
 function renderSkillDetail(skill) {
   if (!skillActiveMeta || !skillDocPreview) return;
   if (!skill) {
-    skillActiveMeta.innerHTML = `<strong>未选择 Skill</strong><span>请选择一个本地 skill</span>`;
-    skillDocPreview.innerHTML = `<div class="issue-empty">暂无文档预览。</div>`;
+    skillActiveMeta.innerHTML = `<strong>No Skill selected</strong><span>Select a local skill</span>`;
+    skillDocPreview.innerHTML = `<div class="issue-empty">No document preview.</div>`;
     return;
   }
   if (skill.loading) {
-    skillActiveMeta.innerHTML = `<strong>加载中</strong><span>${escapeHtml(skill.id || "")}</span>`;
+    skillActiveMeta.innerHTML = `<strong>Loading</strong><span>${escapeHtml(skill.id || "")}</span>`;
     skillDocPreview.innerHTML = `<div class="skeleton-container"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div>`;
     return;
   }
@@ -1290,7 +1290,7 @@ function renderSkillDetail(skill) {
   `;
   const docs = skill.docs || [];
   if (!docs.length) {
-    skillDocPreview.innerHTML = `<div class="issue-empty">暂无可读文档。</div>`;
+    skillDocPreview.innerHTML = `<div class="issue-empty">No readable documents.</div>`;
     return;
   }
   const preferred =
@@ -1310,7 +1310,7 @@ function renderSkillDetail(skill) {
       `).join("")}
     </div>
     <div class="skill-doc-content">
-      <div class="report-file-type">${escapeHtml(activeDoc.path)} · ${formatCharCount(activeDoc.chars || 0)} 字符</div>
+      <div class="report-file-type">${escapeHtml(activeDoc.path)} · ${formatCharCount(activeDoc.chars || 0)} Chars</div>
       ${markdownToHtml(activeDoc.content || "")}
     </div>
   `;
@@ -1326,7 +1326,7 @@ async function sendSkillChatMessage() {
   if (skillChatBusy) return;
   const question = skillChatInput?.value.trim() || "";
   if (!currentSkillWikiId) {
-    showToast("请选择本地 Skill", "error");
+    showToast("Select a local Skill", "error");
     return;
   }
   if (!question) {
@@ -1336,10 +1336,10 @@ async function sendSkillChatMessage() {
   skillChatBusy = true;
   appendSkillChatMessage("user", question);
   skillChatInput.value = "";
-  const loadingNode = appendSkillChatMessage("assistant", "思考中...");
+  const loadingNode = appendSkillChatMessage("assistant", "Thinking...");
   if (skillChatSendBtn) {
     skillChatSendBtn.disabled = true;
-    skillChatSendBtn.textContent = "发送中";
+    skillChatSendBtn.textContent = "Sending";
   }
   try {
     const data = await api("/api/skill-wikis/chat", {
@@ -1351,15 +1351,15 @@ async function sendSkillChatMessage() {
         ...skillLLMPayload(),
       }),
     });
-    loadingNode.innerHTML = `<div class="skill-chat-role">回答</div><div class="skill-chat-text">${markdownToHtml(data.answer || "")}</div>`;
+    loadingNode.innerHTML = `<div class="skill-chat-role">Answer</div><div class="skill-chat-text">${markdownToHtml(data.answer || "")}</div>`;
   } catch (error) {
-    loadingNode.innerHTML = `<div class="skill-chat-role">回答</div><div class="skill-chat-text error">问答失败：${escapeHtml(error.message)}</div>`;
-    showToast("Skill 问答失败: " + error.message, "error");
+    loadingNode.innerHTML = `<div class="skill-chat-role">Answer</div><div class="skill-chat-text error">Q&A failed: ${escapeHtml(error.message)}</div>`;
+    showToast("Skill Q&A failed: " + error.message, "error");
   } finally {
     skillChatBusy = false;
     if (skillChatSendBtn) {
       skillChatSendBtn.disabled = false;
-      skillChatSendBtn.textContent = "发送";
+      skillChatSendBtn.textContent = "Send";
     }
     scrollSkillChatToBottom();
   }
@@ -1371,7 +1371,7 @@ function appendSkillChatMessage(role, text) {
   if (empty) empty.remove();
   const node = document.createElement("article");
   node.className = `skill-chat-message ${role}`;
-  const label = role === "user" ? "问题" : "回答";
+  const label = role === "user" ? "Question" : "Answer";
   const body = role === "assistant" ? markdownToHtml(text) : `<p>${escapeHtml(text)}</p>`;
   node.innerHTML = `<div class="skill-chat-role">${label}</div><div class="skill-chat-text">${body}</div>`;
   skillChatMessages.appendChild(node);
@@ -1407,8 +1407,8 @@ async function loadReport(name) {
     updateMetricsFromSummary(data.summary);
   } catch (error) {
     currentReportName = "";
-    reportViewer.innerHTML = `<div class="empty-state error"><p>加载报告失败</p><span>${escapeHtml(error.message)}</span></div>`;
-    showToast("加载报告失败: " + error.message, "error");
+    reportViewer.innerHTML = `<div class="empty-state error"><p>Failed to load report</p><span>${escapeHtml(error.message)}</span></div>`;
+    showToast("Failed to load report: " + error.message, "error");
   }
 }
 
@@ -1426,7 +1426,7 @@ async function openReportSidePanel(name, focus = {}) {
       <div class="skeleton skeleton-text short"></div>
     </div>
   `;
-  if (sideReportTitle) sideReportTitle.textContent = "加载中...";
+  if (sideReportTitle) sideReportTitle.textContent = "Loading...";
   if (sideReportName) sideReportName.textContent = name;
 
   try {
@@ -1445,8 +1445,8 @@ async function openReportSidePanel(name, focus = {}) {
     sideReportViewer.innerHTML = renderMarkdownPreview(data.content || "", { headingPrefix: "side-report-preview" });
     focusReportPreview(data.content || "", focus);
   } catch (error) {
-    sideReportViewer.innerHTML = `<div class="empty-state error"><p>加载报告失败</p><span>${escapeHtml(error.message)}</span></div>`;
-    showToast("加载报告失败: " + error.message, "error");
+    sideReportViewer.innerHTML = `<div class="empty-state error"><p>Failed to load report</p><span>${escapeHtml(error.message)}</span></div>`;
+    showToast("Failed to load report: " + error.message, "error");
   }
 }
 
@@ -1473,7 +1473,7 @@ function focusReportPreview(content, focus = {}) {
   sideReportViewer.insertAdjacentHTML(
     "afterbegin",
     `<section class="source-focus-card">
-      <strong>定位到 Issue 原文附近</strong>
+      <strong>Located near the original issue text</strong>
       <div class="source-lines">${snippet}</div>
     </section>`
   );
@@ -1516,9 +1516,9 @@ async function openEvidenceDrawer({ evidenceId, reportName, href = "" }) {
   positionEvidenceDrawer();
   evidenceDrawer.classList.add("open");
   evidenceDrawer.setAttribute("aria-hidden", "false");
-  if (evidenceDrawerBadge) evidenceDrawerBadge.textContent = "证据卡";
+  if (evidenceDrawerBadge) evidenceDrawerBadge.textContent = "Evidence Card";
   if (evidenceDrawerTitle) evidenceDrawerTitle.textContent = normalizedEvidenceId;
-  if (evidenceDrawerSource) evidenceDrawerSource.textContent = evidenceReportName || "未找到证据卡文件";
+  if (evidenceDrawerSource) evidenceDrawerSource.textContent = evidenceReportName || "Evidence card file not found";
   if (evidenceDrawerActions) evidenceDrawerActions.innerHTML = "";
   evidenceDrawerContent.innerHTML = `
     <div class="skeleton-container">
@@ -1530,7 +1530,7 @@ async function openEvidenceDrawer({ evidenceId, reportName, href = "" }) {
   `;
 
   if (!evidenceReportName) {
-    evidenceDrawerContent.innerHTML = `<div class="empty-state error"><p>未找到证据卡文件</p><span>${escapeHtml(reportName || "")}</span></div>`;
+    evidenceDrawerContent.innerHTML = `<div class="empty-state error"><p>Evidence card file not found</p><span>${escapeHtml(reportName || "")}</span></div>`;
     return;
   }
 
@@ -1540,7 +1540,7 @@ async function openEvidenceDrawer({ evidenceId, reportName, href = "" }) {
     if (evidenceDrawerSource) evidenceDrawerSource.textContent = data.name || evidenceReportName;
     evidenceDrawerContent.dataset.reportName = data.name || evidenceReportName;
     if (!cardMarkdown) {
-      evidenceDrawerContent.innerHTML = `<div class="empty-state error"><p>未找到 ${escapeHtml(normalizedEvidenceId)}</p><span>${escapeHtml(data.name || evidenceReportName)}</span></div>`;
+      evidenceDrawerContent.innerHTML = `<div class="empty-state error"><p>Not found: ${escapeHtml(normalizedEvidenceId)}</p><span>${escapeHtml(data.name || evidenceReportName)}</span></div>`;
       return;
     }
     evidenceDrawerActions.innerHTML = renderEvidenceDrawerActions(cardMarkdown, data.name || evidenceReportName);
@@ -1549,8 +1549,8 @@ async function openEvidenceDrawer({ evidenceId, reportName, href = "" }) {
     });
     evidenceDrawerContent.scrollTop = 0;
   } catch (error) {
-    evidenceDrawerContent.innerHTML = `<div class="empty-state error"><p>证据卡加载失败</p><span>${escapeHtml(error.message)}</span></div>`;
-    showToast("证据卡加载失败: " + error.message, "error");
+    evidenceDrawerContent.innerHTML = `<div class="empty-state error"><p>Failed to load evidence card</p><span>${escapeHtml(error.message)}</span></div>`;
+    showToast("Failed to load evidence card: " + error.message, "error");
   }
 }
 
@@ -1619,10 +1619,10 @@ function renderEvidenceDrawerActions(cardMarkdown, evidenceReportName) {
   const url = firstUrlFromText(cardMarkdown);
   const parts = [];
   if (url) {
-    parts.push(`<a class="btn btn-primary btn-sm" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">打开原始链接</a>`);
+    parts.push(`<a class="btn btn-primary btn-sm" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Open source link</a>`);
   }
   if (evidenceReportName) {
-    parts.push(`<a class="btn btn-ghost btn-sm" href="/download/reports/${encodeURIComponent(evidenceReportName)}" download>下载证据卡</a>`);
+    parts.push(`<a class="btn btn-ghost btn-sm" href="/download/reports/${encodeURIComponent(evidenceReportName)}" download>Download evidence card</a>`);
   }
   return parts.join("");
 }
@@ -1648,8 +1648,8 @@ async function openSourceReportDrawer(rawPath) {
   positionSourceReportDrawer();
   sourceReportDrawer.classList.add("open");
   sourceReportDrawer.setAttribute("aria-hidden", "false");
-  if (sourceReportDrawerTitle) sourceReportDrawerTitle.textContent = "加载中...";
-  if (sourceReportDrawerPath) sourceReportDrawerPath.textContent = reportDisplayPath || rawPath || "未识别来源路径";
+  if (sourceReportDrawerTitle) sourceReportDrawerTitle.textContent = "Loading...";
+  if (sourceReportDrawerPath) sourceReportDrawerPath.textContent = reportDisplayPath || rawPath || "Unrecognized source path";
   if (sourceReportDrawerMeta) sourceReportDrawerMeta.innerHTML = "";
   sourceReportDrawerContent.innerHTML = `
     <div class="skeleton-container">
@@ -1661,7 +1661,7 @@ async function openSourceReportDrawer(rawPath) {
   `;
 
   if (!reportName) {
-    sourceReportDrawerContent.innerHTML = `<div class="empty-state error"><p>无法识别来源报告</p><span>${escapeHtml(rawPath || "")}</span></div>`;
+    sourceReportDrawerContent.innerHTML = `<div class="empty-state error"><p>Unable to identify source report</p><span>${escapeHtml(rawPath || "")}</span></div>`;
     return;
   }
 
@@ -1677,8 +1677,8 @@ async function openSourceReportDrawer(rawPath) {
     });
     sourceReportDrawerContent.scrollTop = 0;
   } catch (error) {
-    sourceReportDrawerContent.innerHTML = `<div class="empty-state error"><p>来源报告加载失败</p><span>${escapeHtml(error.message)}</span></div>`;
-    showToast("来源报告加载失败: " + error.message, "error");
+    sourceReportDrawerContent.innerHTML = `<div class="empty-state error"><p>Failed to load source report</p><span>${escapeHtml(error.message)}</span></div>`;
+    showToast("Failed to load source report: " + error.message, "error");
   }
 }
 
@@ -1841,7 +1841,7 @@ function renderSideSummaryHtml(data) {
     summary.reference_count || 0,
     summary.issue_count || 0,
   ];
-  const labels = ["类型", "任务", "参考点", "Issue"];
+  const labels = ["Type", "Task", "References", "Issue"];
   return values
     .map(
       (value, index) => `
@@ -1858,7 +1858,7 @@ function renderIssueField(label, value) {
   if (!value) return "";
   return `
     <p class="issue-field">
-      <b>${escapeHtml(label)}：</b>${escapeHtml(value)}
+      <b>${escapeHtml(label)}: </b>${escapeHtml(value)}
     </p>
   `;
 }
@@ -1887,7 +1887,7 @@ function renderSummary(summary) {
         String(summary.issue_count || 0),
         formatCharCount(summary.chars || 0),
       ]
-    : ["暂无", "0", "0", "0"];
+    : ["None", "0", "0", "0"];
   resultSummary.querySelectorAll("strong").forEach((card, index) => {
     card.textContent = values[index];
   });
@@ -1896,13 +1896,13 @@ function renderSummary(summary) {
 function renderIssues(issues) {
   if (!issuePanel) return;
   if (!issues.length) {
-    issuePanel.innerHTML = `<div class="issue-empty">当前报告暂无结构化 Issue。可在质检报告或含“问题/风险/缺口”的章节中查看。</div>`;
+    issuePanel.innerHTML = `<div class="issue-empty">The current report has no structured issues. Check QA reports or sections containing question/risk/gap notes.</div>`;
     return;
   }
   issuePanel.innerHTML = `
     <div class="issue-panel-header">
-      <strong>详细 Issue</strong>
-      <span>来自分块阅读、报告正文或质检输出的结构化问题</span>
+      <strong>Issue Details</strong>
+      <span>Structured issues from chunked reading, report content, or QA output.</span>
     </div>
     ${issues
       .map(
@@ -1910,12 +1910,12 @@ function renderIssues(issues) {
           <article class="issue-item ${escapeHtml(issue.severity || "medium")}">
             <span>${escapeHtml(issue.severity || "medium")}</span>
             <div class="issue-content">
-              <strong>${escapeHtml(issue.title || "未命名 Issue")}</strong>
-              ${renderIssueField("原因", issue.reason || issue.detail)}
-              ${renderIssueField("证据", issue.evidence)}
-              ${renderIssueField("建议", issue.suggestion)}
+              <strong>${escapeHtml(issue.title || "Untitled Issue")}</strong>
+              ${renderIssueField("Reason", issue.reason || issue.detail)}
+              ${renderIssueField("Evidence", issue.evidence)}
+              ${renderIssueField("Suggestion", issue.suggestion)}
               ${renderIssueLocation({
-                report: "当前报告",
+                report: "Current report",
                 lineNumber: issue.line_number,
                 section: issue.section,
               })}
@@ -1931,7 +1931,7 @@ function renderIssues(issues) {
 function renderQualityIssues(issues) {
   if (!qualityIssueList) return;
   if (!issues.length) {
-    qualityIssueList.innerHTML = `<div class="issue-empty">暂无 Issue。运行质检闭环后会展示每轮问题、影响范围和修复方向。</div>`;
+    qualityIssueList.innerHTML = `<div class="issue-empty">No issues yet. After the QA loop runs, each round will show problems, impact scope, and fix direction.</div>`;
     return;
   }
   const groups = groupIssuesByTask(issues);
@@ -1952,14 +1952,14 @@ function renderQualityIssues(issues) {
 function renderQualityIssueGroups(groups) {
   if (!qualityIssueList) return;
   if (!groups.length) {
-    qualityIssueList.innerHTML = `<div class="issue-empty">暂无 Issue。运行质检闭环后会展示每轮问题、影响范围和修复方向。</div>`;
+    qualityIssueList.innerHTML = `<div class="issue-empty">No issues yet. After the QA loop runs, each round will show problems, impact scope, and fix direction.</div>`;
     return;
   }
   const totalIssues = groups.reduce((sum, group) => sum + Number(group.issueCount || 0), 0);
   qualityIssueList.innerHTML = `
     <div class="issue-library-summary">
-      <strong>共 ${totalIssues} 个 Issue</strong>
-      <span>先按任务归档；打开任务后再加载该任务的问题、来源章节、行号和原文片段。</span>
+      <strong>Total ${totalIssues} issues</strong>
+      <span>Grouped by task first. Open a task to load issues, source sections, line numbers, and source snippets.</span>
     </div>
     ${groups
     .map(
@@ -1968,16 +1968,16 @@ function renderQualityIssueGroups(groups) {
           <div class="report-folder-header">
             <div>
               <h3 title="${escapeHtml(issueGroupDisplayTitle(group))}">${escapeHtml(issueGroupDisplayTitle(group))}</h3>
-              <time>${escapeHtml(group.taskId)} · ${new Date(group.modifiedAt * 1000).toLocaleString("zh-CN")}</time>
+              <time>${escapeHtml(group.taskId)} · ${new Date(group.modifiedAt * 1000).toLocaleString("en-US")}</time>
             </div>
-            <span class="report-tag">${group.issueCount} 个 Issue</span>
+            <span class="report-tag">${group.issueCount} issues</span>
           </div>
           <div class="report-meta">
             ${issueGroupTags(group).map((tag) => `<span class="report-tag">${escapeHtml(tag)}</span>`).join("")}
           </div>
           <div class="report-card-footer">
-            <span class="report-tag">任务 Issue 文件夹</span>
-            <button class="btn btn-ghost btn-sm" data-issue-task="${escapeHtml(group.taskId)}">打开 Issue</button>
+            <span class="report-tag">Task issue folder</span>
+            <button class="btn btn-ghost btn-sm" data-issue-task="${escapeHtml(group.taskId)}">Open issues</button>
           </div>
         </section>
       `
@@ -2010,8 +2010,8 @@ async function loadQualityIssues(force = false) {
     issuesLoaded = true;
     renderQualityIssueGroups(issueGroupsCache);
   } catch (error) {
-    qualityIssueList.innerHTML = `<div class="issue-empty">Issue 加载失败：${escapeHtml(error.message)}</div>`;
-    showToast("加载 Issue 失败: " + error.message, "error");
+    qualityIssueList.innerHTML = `<div class="issue-empty">Failed to load issues: ${escapeHtml(error.message)}</div>`;
+    showToast("Failed to load issues: " + error.message, "error");
   } finally {
     issuesLoading = false;
   }
@@ -2032,21 +2032,21 @@ async function renderIssueFolderFiles(taskId) {
     allIssuesCache = data.issues || [];
     group = groupIssuesByTask(allIssuesCache).find((item) => item.taskId === taskId);
   } catch (error) {
-    qualityIssueList.innerHTML = `<div class="issue-empty">Issue 加载失败：${escapeHtml(error.message)}</div>`;
-    showToast("加载任务 Issue 失败: " + error.message, "error");
+    qualityIssueList.innerHTML = `<div class="issue-empty">Failed to load issues: ${escapeHtml(error.message)}</div>`;
+    showToast("Failed to load task issues: " + error.message, "error");
     return;
   }
   if (!group) {
-    qualityIssueList.innerHTML = `<div class="issue-empty">当前任务没有可展示的 Issue。</div>`;
+    qualityIssueList.innerHTML = `<div class="issue-empty">This task has no displayable issues.</div>`;
     return;
   }
   qualityIssueList.innerHTML = `
     <section class="report-file-page">
       <div class="report-file-page-header">
-        <button class="btn btn-ghost btn-sm" data-back-issue-folders type="button">返回文件夹</button>
+        <button class="btn btn-ghost btn-sm" data-back-issue-folders type="button">Back to folders</button>
         <div>
           <h3 title="${escapeHtml(issueGroupDisplayTitle(group))}">${escapeHtml(issueGroupDisplayTitle(group))}</h3>
-          <p>${escapeHtml(group.taskId)} · ${group.issues.length} 个 Issue，按来源报告展开；点击来源在右侧预览原文件。</p>
+          <p>${escapeHtml(group.taskId)} · ${group.issues.length} issues, grouped by source report. Click a source to preview the original file on the right.</p>
         </div>
       </div>
       <div class="issue-file-list">
@@ -2058,7 +2058,7 @@ async function renderIssueFolderFiles(taskId) {
     button.addEventListener("click", () => {
       const report = button.dataset.report;
       if (!findReportByName(report)) {
-        showToast("找不到对应来源文件: " + report, "warning");
+        showToast("Source file not found: " + report, "warning");
         return;
       }
       const line = Number(button.dataset.line || 0);
@@ -2080,22 +2080,22 @@ function renderIssueRow(item) {
           <span class="report-tag">${escapeHtml(item.reportTitle)}</span>
         </div>
         <strong>${escapeHtml(item.title)}</strong>
-        ${renderIssueField("原因", item.reason || item.detail)}
-        ${renderIssueField("证据", item.evidence)}
-        ${renderIssueField("建议", item.suggestion)}
+        ${renderIssueField("Reason", item.reason || item.detail)}
+        ${renderIssueField("Evidence", item.evidence)}
+        ${renderIssueField("Suggestion", item.suggestion)}
         ${renderIssueLocation(item)}
         ${renderIssueContext(item)}
       </div>
-      <button class="btn btn-ghost btn-sm" data-report="${escapeHtml(item.report)}" data-line="${escapeHtml(item.lineNumber || "")}" data-query="${escapeHtml(item.title)}" ${item.sourceExists ? "" : "disabled"}>${item.sourceExists ? "定位原文" : "来源缺失"}</button>
+      <button class="btn btn-ghost btn-sm" data-report="${escapeHtml(item.report)}" data-line="${escapeHtml(item.lineNumber || "")}" data-query="${escapeHtml(item.title)}" ${item.sourceExists ? "" : "disabled"}>${item.sourceExists ? "Locate source text" : "Source missing"}</button>
     </article>
   `;
 }
 
 function renderIssueLocation(item) {
   const parts = [];
-  if (item.section) parts.push(`章节：${item.section}`);
-  if (item.lineNumber) parts.push(`行号：${item.lineNumber}`);
-  parts.push(`来源文件：${item.report || "未匹配到文件"}`);
+  if (item.section) parts.push(`Section: ${item.section}`);
+  if (item.lineNumber) parts.push(`Line: ${item.lineNumber}`);
+  parts.push(`Source file: ${item.report || "No matched file"}`);
   return `<small class="issue-source">${escapeHtml(parts.join(" · "))}</small>`;
 }
 
@@ -2129,12 +2129,12 @@ function collectIssues(reports) {
 function updateBusinessMetrics(job) {
   if (!job) return;
   const elapsed = job.created_at ? Math.max(0, Math.round(Date.now() / 1000 - job.created_at)) : 0;
-  if (job.status === "queued") timeMetric.textContent = `${elapsed}s 排队中`;
-  if (job.status === "running") timeMetric.textContent = `${elapsed}s 运行中`;
-  if (job.status === "terminating") timeMetric.textContent = `${elapsed}s 终止中`;
-  if (job.status === "completed") timeMetric.textContent = `${elapsed}s 完成`;
-  if (job.status === "terminated") timeMetric.textContent = `${elapsed}s 已终止`;
-  if (job.status === "failed") timeMetric.textContent = "需人工介入";
+  if (job.status === "queued") timeMetric.textContent = `${elapsed}s Queued`;
+  if (job.status === "running") timeMetric.textContent = `${elapsed}s Running`;
+  if (job.status === "terminating") timeMetric.textContent = `${elapsed}s Terminating`;
+  if (job.status === "completed") timeMetric.textContent = `${elapsed}s Done`;
+  if (job.status === "terminated") timeMetric.textContent = `${elapsed}s Terminated`;
+  if (job.status === "failed") timeMetric.textContent = "Needs manual intervention";
 }
 
 function updateMetricsFromSummary(summary) {
@@ -2142,13 +2142,13 @@ function updateMetricsFromSummary(summary) {
   const references = summary.reference_count || 0;
   const sections = summary.sections || 0;
   const issues = summary.issue_count || 0;
-  coverageMetric.textContent = `${references} 参考点 / ${sections} 章节`;
-  consistencyMetric.textContent = issues ? `${issues} Issue 待看` : "结构通过";
+  coverageMetric.textContent = `${references} references / ${sections} sections`;
+  consistencyMetric.textContent = issues ? `${issues} issues to review` : "Structure passed";
   if (coverageHelp) {
-    coverageHelp.textContent = `口径：后端从报告正文统计 [参考点N] 引用数和 Markdown 标题章节数；当前为 ${references} 个参考点、${sections} 个章节。`;
+    coverageHelp.textContent = `Basis: backend counts [ReferenceN] citations and Markdown headings in the report; current: ${references}  references, ${sections}  sections.`;
   }
   if (consistencyHelp) {
-    consistencyHelp.textContent = `口径：后端从“Issue/问题/风险/缺口/待修复”等章节抽取结构化问题；当前为 ${issues} 个。`;
+    consistencyHelp.textContent = `Basis: backend extracts structured issues from Issue/problem/risk/gap/to-fix sections; current: ${issues}  items.`;
   }
 }
 
@@ -2158,9 +2158,9 @@ function setQualityStatus(value) {
 }
 
 function updateQualityPreview() {
-  qualityModePreview.textContent = "交付验收";
+  qualityModePreview.textContent = "Delivery acceptance";
   maxIterationPreview.textContent = maxIterations.value || "3";
-  setQualityStatus(enableQualityLoop.checked ? "已启用" : "已关闭");
+  setQualityStatus(enableQualityLoop.checked ? "Enabled" : "Disabled");
 }
 
 function loadSettings() {
@@ -2197,7 +2197,7 @@ function saveSettings() {
   };
   localStorage.setItem("competitor_ai_settings", JSON.stringify(settings));
   syncSettingsToWorkspace();
-  showToast("配置已保存", "success");
+  showToast("Settings saved", "success");
 }
 
 function syncSettingsToWorkspace() {
@@ -2273,8 +2273,8 @@ function issueGroupDisplayTitle(group) {
   if (reportGroup?.displayTitle) return reportGroup.displayTitle;
   const issues = group?.issues || [];
   const preferred =
-    issues.find((issue) => issue.reportType === "最终报告" && issue.reportTitle) ||
-    issues.find((issue) => issue.reportType === "分析总报告" && issue.reportTitle) ||
+    issues.find((issue) => issue.reportType === "Final report" && issue.reportTitle) ||
+    issues.find((issue) => issue.reportType === "Analysis summary" && issue.reportTitle) ||
     issues.find((issue) => issue.reportTitle);
   return preferred?.reportTitle || taskId;
 }
@@ -2307,10 +2307,10 @@ function reportType(report) {
 
 function reportTypeLabel(report) {
   const type = reportType(report);
-  if (type === "quality") return "质检报告";
-  if (type === "final") return "最终报告";
-  if (type === "report_agent") return "分析总报告";
-  return "单品报告";
+  if (type === "quality") return "QA report";
+  if (type === "final") return "Final report";
+  if (type === "report_agent") return "Analysis summary";
+  return "Product report";
 }
 
 function summarizeTaskTags(reports) {
@@ -2324,11 +2324,11 @@ function summarizeTaskTags(reports) {
 
 function inferTaskId(name) {
   const match = String(name || "").match(/(\d{8}_\d{6})/);
-  return match ? match[1] : "未分组";
+  return match ? match[1] : "Ungrouped";
 }
 
 function formatCharCount(chars) {
-  if (chars > 10000) return `${(chars / 10000).toFixed(1)}万`;
+  if (chars > 10000) return `${(chars / 10000).toFixed(1)}0k`;
   return String(chars);
 }
 
@@ -2340,7 +2340,7 @@ function formatSize(value) {
 
 function formatTimestamp(value) {
   if (!value) return "-";
-  return new Date(value * 1000).toLocaleTimeString("zh-CN");
+  return new Date(value * 1000).toLocaleTimeString("en-US");
 }
 
 async function api(path, options = {}) {
@@ -2375,7 +2375,7 @@ function renderMarkdownToc(headings) {
   if (headings.length < 2) return "";
   return `
     <nav class="markdown-preview-toc" aria-label="Document outline">
-      <div class="markdown-preview-toc-title">目录</div>
+      <div class="markdown-preview-toc-title">Contents</div>
       <div class="markdown-preview-toc-list">
         ${headings
           .map(
@@ -2655,9 +2655,9 @@ function readFileInto(input, textarea) {
   const reader = new FileReader();
   reader.onload = () => {
     textarea.value = String(reader.result || "");
-    showToast(`已加载文件 ${file.name}`, "success");
+    showToast(`Loaded file ${file.name}`, "success");
   };
-  reader.onerror = () => showToast("文件读取失败", "error");
+  reader.onerror = () => showToast("Failed to read file", "error");
   reader.readAsText(file, "utf-8");
 }
 

@@ -1,10 +1,12 @@
 """报告包轻量自检。
 
-这里不替代下游质检 Agent，只做结构完整性检查：章节是否齐、claim 是否能回溯
-到 evidence/source、SWOT 是否绑定证据。
+这里不替代下游QA Agent，只做结构完整性检查：章节是否齐、claim 是否能回溯
+到 evidence/source、SWOT 是否绑定evidence。
 """
 
 from __future__ import annotations
+
+OUTPUT_LANGUAGE = "English"
 
 try:
     from .models import ReportState
@@ -14,18 +16,18 @@ except ImportError:
 
 REQUIRED_SECTIONS = [
     "核心结论",
-    "竞品分类",
-    "用户场景",
-    "重点竞品拆解",
+    "competitor分类",
+    "user场景",
+    "重点competitor拆解",
     "横向能力对比",
     "SWOT",
-    "产品策略建议",
-    "资料来源",
+    "产品strategysuggestion",
+    "资料source",
 ]
 
 
 def precheck_report_package(state: ReportState) -> ReportState:
-    """检查 ReportState 的基本完整性并写回风险列表。"""
+    """检查 ReportState 的基本完整性并写回risk列表。"""
 
     report = state.report_markdown or ""
     for section in REQUIRED_SECTIONS:

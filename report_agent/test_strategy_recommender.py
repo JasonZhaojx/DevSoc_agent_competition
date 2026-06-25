@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+OUTPUT_LANGUAGE = "English"
+
 import sys
 from pathlib import Path
 

@@ -4,10 +4,12 @@ Run from project root:
     python report_agent/run_example.py
 
 Or pass custom input:
-    python report_agent/run_example.py "AI IDE 编程助手竞品分析" --competitors "Trae, Cursor"
+    python report_agent/run_example.py "AI IDE 编程助手competitorAnalyze" --competitors "Trae, Cursor"
 """
 
 from __future__ import annotations
+
+OUTPUT_LANGUAGE = "English"
 
 import argparse
 import re
@@ -24,7 +26,7 @@ from report_agent.models import WritingAgentConfig
 from report_agent.pipeline import run_search_and_report
 
 
-DEFAULT_PRODUCT_DESCRIPTION = "AI IDE 编程助手竞品分析"
+DEFAULT_PRODUCT_DESCRIPTION = "AI IDE 编程助手competitorAnalyze"
 DEFAULT_COMPETITORS = ["Trae", "Cursor"]
 DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent / "outputs"
 
@@ -37,12 +39,12 @@ def parse_args() -> argparse.Namespace:
         "product_description",
         nargs="?",
         default=DEFAULT_PRODUCT_DESCRIPTION,
-        help="产品方向、竞品分析需求或要调研的问题",
+        help="产品方向、competitorAnalyzebrief或要调研的issue",
     )
     parser.add_argument(
         "--competitors",
         default=", ".join(DEFAULT_COMPETITORS),
-        help="可选竞品名，多个竞品用逗号分隔；传空字符串则不指定竞品",
+        help="可选competitor名，多个competitor用逗号分隔；传空字符串则不指定competitor",
     )
     parser.add_argument(
         "--task-id",

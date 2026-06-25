@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+OUTPUT_LANGUAGE = "English"
+
 from .core import run_writing_agent
 from .models import (
     EvidenceCard,

@@ -425,7 +425,7 @@ Tasks:
 - Put detailed knowledge in subfiles rather than dumping it all into SKILL.md. The subfiles must preserve report facts, not compress them into a high-level abstract.
 - Do not replace a comparison table with a sentence like "contains 4 tables". Recreate the important table rows and cells in Markdown tables whenever table information is present in the notes.
 - Maintain separate detailed files for at least these layers when present: competitor/product profiles, comparison tables, SWOT/opportunities, product strategy actions, evidence/source index, missing-information/manual-search items, and quality issues.
-- Preserve all concrete values that appear in notes: prices, percentages, scores, dates, product names, capability names, evidence_ids, source names, priorities, timeframes, risks, success metrics, and "待搜索/未找到明确证据" gaps.
+- Preserve all concrete values that appear in notes: prices, percentages, scores, dates, product names, capability names, evidence_ids, source names, priorities, timeframes, risks, success metrics, and "待搜索/未找到明确evidence" gaps.
 - For each competitor/product mentioned in notes, keep a dedicated profile or table row with positioning, strengths, weaknesses, missing fields, evidence ids, and PM implications.
 - Keep "source-memory" files if they already exist; do not delete or overwrite them unless replacing with richer source-backed content.
 - If files already exist, incrementally maintain them: merge, rewrite, supplement, and deduplicate.
@@ -510,7 +510,7 @@ def write_source_memory_files(
         "\n\n".join(
             [
                 "# 原始报告全文",
-                f"来源: {source_label or 'local report'}",
+                f"source: {source_label or 'local report'}",
                 "用途: 作为 skill wiki 的事实兜底层，避免维护过程过度压缩报告正文。",
                 article.strip(),
                 "",
@@ -526,8 +526,8 @@ def write_source_memory_files(
         source_tables.write_text(
             "\n\n".join(
                 [
-                    "# 原始报告表格摘录",
-                    "以下表格直接来自报告正文，用于保留横向对比字段、待搜索项和证据口径。",
+                    "# 原始报告table摘录",
+                    "以下table直接来自报告正文，用于保留cross-product comparison字段、待搜索项和evidence口径。",
                     *table_blocks,
                     "",
                 ]
@@ -589,7 +589,7 @@ def is_lossy_table_document(path: Path, content: str) -> bool:
         or "comparison" in name
         or "对比" in head
         or "表" in head
-        or "竞品" in head
+        or "competitor" in head
     )
     if not table_intent:
         return False
@@ -609,8 +609,8 @@ def build_source_backed_table_document(source_tables_content: str, original_cont
     original_content = original_content.strip()
     parts = [
         source_tables_content,
-        "## 原生成摘要（保留供参考）",
-        "builder 检测到原表格文件只有摘要、没有 Markdown 表格行，已使用报告原文表格补回。",
+        "## 原Generate摘要（保留供参考）",
+        "builder 检测到原table文件只有摘要、没有 Markdown table行，已使用报告原文table补回。",
     ]
     if original_content:
         parts.append(original_content)
@@ -649,7 +649,7 @@ def is_markdown_table_line(line: str) -> bool:
 def build_chunk_fact_register(article_notes: List[Dict[str, Any]]) -> str:
     parts = [
         "# Chunk 事实与待补信息登记",
-        "本文件由 builder 根据 chunk notes 确定性生成，用于保留每个分块抽取出的事实、缺口和建议文件。",
+        "本文件由 builder 根据 chunk notes 确定性Generate，用于保留Each分块抽取出的事实、gap和suggestion文件。",
     ]
     for note in article_notes:
         if not isinstance(note, dict):
@@ -668,7 +668,7 @@ def build_chunk_fact_register(article_notes: List[Dict[str, Any]]) -> str:
             parts.extend(f"- {item}" for item in open_questions if str(item).strip())
         suggested_files = note.get("suggested_files")
         if isinstance(suggested_files, list) and suggested_files:
-            parts.append("\n### 建议落盘文件")
+            parts.append("\n### suggestion落盘文件")
             parts.extend(f"- {item}" for item in suggested_files if str(item).strip())
     return "\n".join(parts).rstrip() + "\n"
 

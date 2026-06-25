@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+OUTPUT_LANGUAGE = "English"
+
 import json
 import re
 from dataclasses import dataclass
@@ -24,7 +26,7 @@ except ImportError:
 
 
 PENDING_SEARCH = "待搜索"
-NO_PRODUCT_EVIDENCE = "未找到明确产品级证据"
+NO_PRODUCT_EVIDENCE = "未找到明确产品级evidence"
 
 
 @dataclass
@@ -294,14 +296,14 @@ def _mark_table_gaps(
                     rows,
                     columns=columns,
                     competitors=competitors,
-                    table_name=clean_text(name, 80) or "横向对比表",
+                    table_name=clean_text(name, 80) or "cross-product comparison表",
                 )
             elif columns:
                 table["rows"] = _mark_generic_rows(
                     [],
                     columns=columns,
                     competitors=competitors,
-                    table_name=clean_text(name, 80) or "横向对比表",
+                    table_name=clean_text(name, 80) or "cross-product comparison表",
                 )
         marked.append(table)
     if marked:
@@ -331,7 +333,7 @@ def _mark_generic_rows(
     *,
     columns: Sequence[str] | None = None,
     competitors: Sequence[str] = (),
-    table_name: str = "横向对比表",
+    table_name: str = "cross-product comparison表",
 ) -> List[Dict[str, Any]]:
     valid_rows = [dict(row) for row in rows or [] if isinstance(row, dict)]
     if not valid_rows:
@@ -353,11 +355,11 @@ def _mark_generic_rows(
             if column and column not in row and not _is_evidence_column(column):
                 row[column] = PENDING_SEARCH
         for key, value in list(row.items()):
-            if key in {"evidence_ids", "证据ID", "证据ids", "source_ids"}:
+            if key in {"evidence_ids", "evidenceID", "evidenceids", "source_ids"}:
                 continue
             if _is_missing(value):
                 row[key] = PENDING_SEARCH
-        if not any(key in row for key in ("evidence_ids", "证据ID")):
+        if not any(key in row for key in ("evidence_ids", "evidenceID")):
             row["evidence_ids"] = []
     return valid_rows
 
@@ -397,8 +399,8 @@ def _competitor_column(
     columns: Sequence[str], rows: Sequence[Dict[str, Any]]
 ) -> str:
     candidates = {
-        "竞品",
-        "竞品名称",
+        "competitor",
+        "competitor名称",
         "产品",
         "产品名称",
         "competitor",
@@ -430,7 +432,7 @@ def _columns_from_generic_rows(rows: Sequence[Dict[str, Any]]) -> List[str]:
 
 def _is_evidence_column(column: str) -> bool:
     column = clean_text(column, 80)
-    if "证据" in column or "evidence" in column.lower() or "source" in column.lower():
+    if "evidence" in column or "evidence" in column.lower() or "source" in column.lower():
         return True
     return column in {
         "evidence_ids",
@@ -438,9 +440,9 @@ def _is_evidence_column(column: str) -> bool:
         "璇佹嵁ids",
         "source_ids",
         "pending_search_query",
-        "支持证据ID",
-        "关联证据ID",
-        "证据ID",
+        "支持evidenceID",
+        "关联evidenceID",
+        "evidenceID",
     }
 
 
@@ -475,10 +477,10 @@ def _generic_pending_rows(
         for column in columns
         if clean_text(column, 80)
         and clean_text(column, 80)
-        not in {"evidence_ids", "证据ID", "证据ids", "source_ids", "pending_search_query"}
+        not in {"evidence_ids", "evidenceID", "evidenceids", "source_ids", "pending_search_query"}
     ]
     if not visible_columns:
-        visible_columns = ["竞品", "待补充信息"]
+        visible_columns = ["competitor", "待补充信息"]
     competitor_column = _competitor_column(visible_columns, [])
     subjects = [clean_text(name, 80) for name in competitors if clean_text(name, 80)]
     if not competitor_column:
@@ -505,7 +507,7 @@ def _generic_pending_row_for_subject(
 ) -> Dict[str, Any]:
     row: Dict[str, Any] = {}
     for column in columns:
-        if column in {"evidence_ids", "证据ID", "证据ids", "source_ids", "pending_search_query"}:
+        if column in {"evidence_ids", "evidenceID", "evidenceids", "source_ids", "pending_search_query"}:
             continue
         if competitor_column and column == competitor_column:
             row[column] = subject or PENDING_SEARCH
@@ -558,7 +560,7 @@ def _mark_scorecard_rows(
             {"dimension": "Tool Use / 集成", "weight": 0.16},
             {"dimension": "Agent 核心能力", "weight": 0.20},
             {"dimension": "信任与控制", "weight": 0.18},
-            {"dimension": "用户体验", "weight": 0.14},
+            {"dimension": "user体验", "weight": 0.14},
             {"dimension": "商业化与壁垒", "weight": 0.14},
         ]
 
@@ -649,7 +651,7 @@ def _collect_gaps(
                     competitor=competitor,
                     field=field,
                     row_index=index,
-                    reason="竞品画像字段缺少可用证据",
+                    reason="competitor画像字段缺少可用evidence",
                 )
 
     for table in tables:
@@ -673,7 +675,7 @@ def _collect_gaps(
                             competitor=competitor,
                             field=field,
                             row_index=index,
-                            reason="定位矩阵字段缺少可用证据",
+                            reason="定位矩阵字段缺少可用evidence",
                         )
         elif name == "agent_capability_scorecard":
             for index, row in enumerate(table.get("dimensions") or []):
@@ -689,7 +691,7 @@ def _collect_gaps(
                             dimension=dimension,
                             field="score",
                             row_index=index,
-                            reason="能力评分缺少竞品证据",
+                            reason="能力评分缺少competitorevidence",
                         )
                 if _is_pending(row.get("reason")):
                     add(
@@ -697,7 +699,7 @@ def _collect_gaps(
                         dimension=dimension,
                         field="reason",
                         row_index=index,
-                        reason="评分理由缺少可用证据",
+                        reason="评分理由缺少可用evidence",
                     )
         elif name == "user_journey_comparison":
             for index, row in enumerate(table.get("rows") or []):
@@ -711,7 +713,7 @@ def _collect_gaps(
                             dimension=stage,
                             field=field,
                             row_index=index,
-                            reason="用户旅程字段缺少可用证据",
+                            reason="user旅程字段缺少可用evidence",
                         )
         else:
             rows = table.get("rows") if isinstance(table.get("rows"), list) else table.get("dimensions")
@@ -722,7 +724,7 @@ def _collect_gaps(
                     continue
                 competitor = _row_competitor(row, competitors)
                 for field, value in row.items():
-                    if field in {"evidence_ids", "证据ID", "source_ids"}:
+                    if field in {"evidence_ids", "evidenceID", "source_ids"}:
                         continue
                     if _is_pending(value) or _is_missing(value):
                         add(
@@ -731,13 +733,13 @@ def _collect_gaps(
                             dimension=clean_text(row.get("维度") or row.get("dimension"), 80),
                             field=str(field),
                             row_index=index,
-                            reason="自由表格字段缺少可用证据",
+                            reason="自由table字段缺少可用evidence",
                         )
     return gaps
 
 
 def _row_competitor(row: Dict[str, Any], competitors: Sequence[str]) -> str:
-    for key in ("competitor", "竞品", "产品", "产品名称"):
+    for key in ("competitor", "competitor", "产品", "产品名称"):
         matched = _match_competitor(row.get(key), competitors)
         if matched:
             return matched
@@ -760,37 +762,37 @@ def _audit_table_gaps_with_llm(
     max_queries = _gap_query_budget(config, len(gaps))
     data = call_json_llm(
         config=config,
-        system_prompt="你是竞品表格质检与检索规划专家，只输出 JSON。",
+        system_prompt="你是competitortableQA与检索规划专家，只Output JSON。",
         user_prompt=f"""
 目标领域:
 {target_domain}
 
-候选竞品:
+候选competitor:
 {json.dumps(list(competitors), ensure_ascii=False)}
 
-当前竞品画像:
+当前competitor画像:
 {json.dumps(profiles, ensure_ascii=False, indent=2)}
 
 当前对比表:
 {json.dumps(tables, ensure_ascii=False, indent=2)}
 
-程序已发现的待搜索缺口:
+程序已发现的待搜索gap:
 {json.dumps([gap.to_dict() for gap in gaps], ensure_ascii=False, indent=2)}
 
 Evidence 摘要:
 {json.dumps(_evidence_summary(evidence_cards), ensure_ascii=False, indent=2)}
 
 请审计整张表，提取需要重新搜索/回填的位置。你需要发现:
-- 单元格为空、待搜索、未找到明确证据。
-- 单元格错栏，例如“产品定位”写到目标用户，“特色功能集”写到核心场景，“代码示例/快捷键/教程”写到主要入口。
-- agent_capability_scorecard 的 reason 过长、只引用某一个竞品却代表整行、或包含教程/代码片段。
-- scores 有分数但对应 reason/evidence 不足，应该搜索对应竞品和维度。
-- 不要为“关联证据ID、ev_001 校验、回填修正、剔除无关片段”生成公网搜索词；这类是内部清洗/自检任务，不是外部事实缺口。
+- 单元格为空、待搜索、未找到明确evidence。
+- 单元格错栏，例如“产品定位”写到目标user，“特色功能集”写到核心场景，“代码示例/快捷键/教程”写到主要入口。
+- agent_capability_scorecard 的 reason 过长、只引用某一个competitor却代表整行、或包含教程/代码片段。
+- scores 有分数但对应 reason/evidence 不足，应该搜索对应competitor和维度。
+- Do not为“关联evidenceID、ev_001 校验、回填修正、剔除无关片段”Generate公网搜索词；这类是内部清洗/自检任务，不是外部事实gap。
 
 返回最多 {max_queries} 个搜索任务，但 gaps 可以多于搜索任务，多个 gap 可共用 query。
-table_name 必须取自当前对比表里的原始 table_name；竞品画像使用 competitor_profiles。
-field 必须是当前行里真实存在的字段名，可以是中文表头；不要凭空发明 pending_search_query 这类内部字段。
-row_index 使用当前表 rows/dimensions 的 0 基下标。自由表格也要审计，不要只看固定三张表。
+table_name Must取自当前对比表里的原始 table_name；competitor画像使用 competitor_profiles。
+field Must是当前行里真实存在的字段名，可以是中文表头；Do not凭空发明 pending_search_query 这类内部字段。
+row_index 使用当前表 rows/dimensions 的 0 基下标。自由table也要审计，Do not只看固定三张表。
 
 返回严格 JSON:
 {{
@@ -899,7 +901,7 @@ def _limit_gaps_by_query_budget(gaps: List[TableGap], query_limit: int) -> List[
         "main_entry",
         "business_model",
         "strategic_judgement",
-        "目标用户",
+        "目标user",
         "核心场景",
         "产品形态",
         "主要入口",
@@ -1019,17 +1021,17 @@ def _match_row_key(field: str, row: Dict[str, Any]) -> str:
 
 def _field_alias(field: str) -> str:
     aliases = {
-        "target_user": "目标用户",
+        "target_user": "目标user",
         "core_scenario": "核心场景",
         "product_form": "产品形态",
         "main_entry": "主要入口",
         "business_model": "商业模式",
         "strategic_judgement": "战略判断",
         "reason": "依据",
-        "user_goal": "用户目标",
-        "competitor_experience": "竞品体验",
+        "user_goal": "user目标",
+        "competitor_experience": "competitor体验",
         "opportunity": "机会点",
-        "competitor": "竞品",
+        "competitor": "competitor",
         "dimension": "维度",
         "stage": "阶段",
     }
@@ -1052,29 +1054,29 @@ def _plan_gap_search_queries(
 
     data = call_json_llm(
         config=config,
-        system_prompt="你是竞品表格缺口搜索词规划器，只输出 JSON。",
+        system_prompt="你是competitortablegap搜索词规划器，只Output JSON。",
         user_prompt=f"""
 目标领域:
 {target_domain}
 
-候选竞品:
+候选competitor:
 {json.dumps(list(competitors), ensure_ascii=False)}
 
-已有表格，待搜索位置已标为“待搜索”:
+已有table，待搜索位置已标为“待搜索”:
 {json.dumps({"competitor_profiles": profiles, "comparison_tables": tables}, ensure_ascii=False, indent=2)}
 
-缺口列表:
+gap列表:
 {json.dumps([gap.to_dict() for gap in gaps], ensure_ascii=False, indent=2)}
 
 已有 EvidenceCard 摘要:
 {json.dumps(_evidence_summary(evidence_cards), ensure_ascii=False, indent=2)}
 
-请为最关键的缺口生成最多 {max_queries} 个搜索关键词。要求:
-- 关键词要能搜到产品级事实，优先官方文档、定价页、发布说明、可信评测。
-- 不要搜安装命令、Dockerfile、脚本、模板、OpenSpec、brainstorm、write-plan。
-- 不要生成“关联证据ID、证据校验、ev_001、回填校验、剔除无关片段”这类内部处理查询；这类问题应通过已有 evidence_ids 自检，不走公网搜索。
-- 每条 query 尽量包含竞品名和需要补的维度/字段。
-- gap_ids 可以覆盖多个缺口。
+请为最关键的gapGenerate最多 {max_queries} 个搜索关键词。要求:
+- 关键词要能搜到产品级事实，优先官方文档、定价页、发布note、可信评测。
+- Do not搜安装命令、Dockerfile、脚本、模板、OpenSpec、brainstorm、write-plan。
+- Do notGenerate“关联evidenceID、evidence校验、ev_001、回填校验、剔除无关片段”这类内部处理查询；这类issue应通过已有 evidence_ids 自检，不走公网搜索。
+- 每条 query 尽量包含competitor名和需要补的维度/字段。
+- gap_ids 可以覆盖多个gap。
 
 返回严格 JSON:
 {{
@@ -1116,7 +1118,7 @@ def _fallback_gap_queries(
             gap.competitor,
             target_domain,
             _query_label(gap.table_name, gap.field, gap.dimension),
-            "官方文档 定价 功能 评测 发布说明",
+            "官方文档 定价 功能 评测 发布note",
         ]
         query = clean_text(" ".join(part for part in parts if part), 180)
         query = _clean_search_query(query)
@@ -1144,21 +1146,21 @@ def _rewrite_repeated_gap_queries(
     if _can_use_planning_llm(config):
         data = call_json_llm(
             config=config,
-            system_prompt="你是搜索关键词改写器，只输出 JSON。",
+            system_prompt="你是搜索关键词改写器，只Output JSON。",
             user_prompt=f"""
 目标领域:
 {target_domain}
 
-下面这些搜索关键词上一轮没有让表格缺口成功回填。请为每一条生成一个极其相似、但字面不同的新搜索关键词。
+下面这些搜索关键词上一轮没有让tablegap成功回填。请为每一条Generate一个极其相似、但字面不同的新搜索关键词。
 
 要求:
-- 保留竞品名称和要查的字段/维度。
-- 不要扩大成泛泛竞品调研。
-- 不要搜索 evidence_id、关联证据、校验回填、内部清洗任务。
+- 保留competitor名称和要查的字段/维度。
+- Do not扩大成泛泛competitor调研。
+- Do not搜索 evidence_id、关联evidence、校验回填、内部清洗任务。
 - 新 query 不能与 old_query 完全相同。
-- 每个 gap_id 返回 1 个 query。
+- Each gap_id 返回 1 个 query。
 
-缺口与旧关键词:
+gap与旧关键词:
 {json.dumps([
     {
         "gap_id": gap_id,
@@ -1208,7 +1210,7 @@ def _retry_query_suffix(gap: Optional[TableGap]) -> str:
         return "pricing page plans official"
     if "安全" in field or "合规" in field or "security" in field.lower():
         return "security privacy compliance official"
-    if "用户" in field or "场景" in field:
+    if "user" in field or "场景" in field:
         return "use cases target users official"
     if dimension:
         return f"{dimension} official documentation"
@@ -1221,14 +1223,14 @@ def _clean_search_query(value: Any) -> str:
         return ""
     lowered = query.lower()
     internal_markers = [
-        "关联证据",
-        "证据id",
+        "关联evidence",
+        "evidenceid",
         "evidence_id",
         "校验回填",
         "校验修正",
         "有效信息提取",
         "剔除无关",
-        "对齐官方画像证据列表",
+        "对齐官方画像evidence列表",
     ]
     if any(marker.lower() in lowered for marker in internal_markers):
         return ""
@@ -1351,24 +1353,24 @@ def _fill_gaps_from_search_results(
     pending_cells = pending_cell_payload(tables)
     data = call_json_llm(
         config=config,
-        system_prompt="你是竞品表格搜索结果分析器，只输出 JSON。",
+        system_prompt="你是competitortable搜索结果Analyze器，只Output JSON。",
         user_prompt=f"""
 目标领域:
 {target_domain}
 
-候选竞品:
+候选competitor:
 {json.dumps(list(competitors), ensure_ascii=False)}
 
-待回填表格:
+待回填table:
 {json.dumps({"competitor_profiles": profiles, "comparison_tables": tables}, ensure_ascii=False, indent=2)}
 
 pending_cells:
 {json.dumps(pending_cells, ensure_ascii=False, indent=2)}
 
-缺口列表:
+gap列表:
 {json.dumps([gap.to_dict() for gap in gaps], ensure_ascii=False, indent=2)}
 
-缺口对应搜索词:
+gap对应搜索词:
 {json.dumps(queries, ensure_ascii=False, indent=2)}
 
 搜索结果:
@@ -1376,11 +1378,11 @@ pending_cells:
 
 请只基于搜索结果回填“待搜索”单元格。要求:
 - 只能回填搜索结果明确支持的产品级事实；不能使用常识猜测。
-- 如果仍然没有证据，保持“待搜索”。
-- 不要写安装命令、Dockerfile、脚本、原始配置、代码片段、教程步骤。
-- 保持原有表名、列名和行顺序，不要把自由表格改成固定模板。
-- 自由表格的中文字段要原字段回填；不要新增 pending_search_query 等内部字段。
-- agent_capability_scorecard 的 scores 只能包含候选竞品 key，分数 0-5；无证据保持“待搜索”。
+- If仍然没有evidence，保持“待搜索”。
+- Do not写安装命令、Dockerfile、脚本、原始配置、代码片段、教程步骤。
+- 保持原有表名、列名和行顺序，Do not把自由table改成固定模板。
+- 自由table的中文字段要原字段回填；Do not新增 pending_search_query 等内部字段。
+- agent_capability_scorecard 的 scores 只能包含候选competitor key，分数 0-5；无evidence保持“待搜索”。
 - 单元格写产品级摘要，每格不超过 80 个中文字符。
 - evidence_ids 使用搜索结果中的 source_id，例如 gap_src_001。
 
@@ -1630,7 +1632,7 @@ def _table_rows(table: Dict[str, Any]) -> Any:
 
 def _merge_generic_row(target: Dict[str, Any], raw: Dict[str, Any]) -> None:
     for field, target_value in list(target.items()):
-        if field in {"pending_search_query", "evidence_ids", "证据ID", "证据ids", "source_ids"}:
+        if field in {"pending_search_query", "evidence_ids", "evidenceID", "evidenceids", "source_ids"}:
             continue
         if isinstance(target_value, dict):
             raw_value = raw.get(field)
@@ -1678,13 +1680,13 @@ def _merge_evidence_ids(target: Dict[str, Any], raw: Dict[str, Any]) -> None:
 
 
 def _merge_chinese_evidence_ids(target: Dict[str, Any], raw: Dict[str, Any]) -> None:
-    values = raw.get("证据ID") or raw.get("证据ids")
+    values = raw.get("evidenceID") or raw.get("evidenceids")
     if not isinstance(values, list):
         return
-    current = target.setdefault("证据ID", [])
+    current = target.setdefault("evidenceID", [])
     if not isinstance(current, list):
         current = []
-        target["证据ID"] = current
+        target["evidenceID"] = current
     for value in values:
         item = clean_text(value, 80)
         if item and item not in current:
@@ -2024,19 +2026,19 @@ def _query_label(table_name: str, field: str, dimension: str) -> str:
 def _search_direction_label(gap: TableGap, query: str) -> str:
     subject = clean_text(gap.competitor or gap.dimension or gap.table_name, 50)
     field_labels = {
-        "target_user": "目标用户",
+        "target_user": "目标user",
         "core_scenario": "核心场景",
         "product_form": "产品形态",
         "main_entry": "主要入口",
         "business_model": "商业模式/定价",
         "strategic_judgement": "定位差异",
-        "score": f"{gap.dimension}能力证据",
+        "score": f"{gap.dimension}能力evidence",
         "reason": f"{gap.dimension}评分依据",
-        "user_goal": "用户目标",
-        "competitor_experience": "竞品体验",
+        "user_goal": "user目标",
+        "competitor_experience": "competitor体验",
         "opportunity": "机会点/痛点",
     }
-    label = field_labels.get(gap.field, gap.field or "补充证据")
+    label = field_labels.get(gap.field, gap.field or "补充evidence")
     query_text = clean_text(query, 90)
     if subject:
         return f"{subject} {label}；关键词：{query_text}"
@@ -2053,8 +2055,8 @@ def _is_missing(value: Any) -> bool:
     if compact in {
         PENDING_SEARCH,
         NO_PRODUCT_EVIDENCE,
-        "未找到明确证据",
-        "未找到明确公开证据",
+        "未找到明确evidence",
+        "未找到明确公开evidence",
         "未找到明确公开信息",
         "未找到明确信息",
         "未找到公开信息",
@@ -2074,7 +2076,7 @@ def _is_missing(value: Any) -> bool:
     }:
         return True
     weak_markers = [
-        "缺少明确证据",
+        "缺少明确evidence",
         "需要补充",
         "仍需进一步验证",
         "需进一步确认",
@@ -2091,13 +2093,13 @@ def _is_missing(value: Any) -> bool:
         "未披露",
         "Web / API / 工作台等产品形态",
         "Web、API 或企业系统集成入口",
-        "围绕 Agent 自动化任务完成与报告生成",
+        "围绕 Agent 自动化任务完成与报告Generate",
         "订阅或企业采购路径需进一步确认",
-        "资料显示其在企业落地、集成或可信控制上具有分析价值",
+        "资料显示其在企业落地、集成或可信控制上具有Analyze价值",
         "实现一个快速排序算法",
         "def quicksort",
         "python运行",
-        "自动弹出补全建议",
+        "自动弹出补全suggestion",
         "generate code from context",
         "实际应用案例演示",
         "flask rest api",

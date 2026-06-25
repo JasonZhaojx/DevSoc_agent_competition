@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+OUTPUT_LANGUAGE = "English"
+
 import json
 import os
 import re
@@ -80,13 +82,13 @@ def read_product_description() -> str:
     description = " ".join(sys.argv[1:]).strip()
     if description:
         return description
-    return input("请输入产品/竞品方向: ").strip()
+    return input("请输入Product / competitor direction: ").strip()
 
 
 def read_optional_text_file() -> tuple[str, str]:
     path_text = os.getenv("OWN_PRODUCT_PARAM_TXT", "").strip()
     if not path_text:
-        path_text = input("请输入自己产品参数 txt 路径（可直接回车跳过）: ").strip().strip('"')
+        path_text = input("请输入自己产品parameters txt 路径（可直接回车跳过）: ").strip().strip('"')
     if not path_text:
         return "", ""
 
@@ -142,7 +144,7 @@ def format_search_evidence(results: list[SearchResult], max_chars: int) -> str:
                 f"[搜索结果{index}]",
                 f"标题: {item.title}",
                 f"链接: {item.url}",
-                f"正文来源: {item.content_source or '未知'}",
+                f"正文source: {item.content_source or '未知'}",
                 f"正文: {text}",
             ]
         )
@@ -261,45 +263,45 @@ def generate_questionnaire(
     search_results: list[SearchResult],
 ) -> list[dict[str, Any]]:
     api_key, base_url, model = active_llm_config()
-    competitor_text = "、".join(competitor_names[:COMPETITOR_LIMIT]) or "未抽取到明确竞品名"
+    competitor_text = "、".join(competitor_names[:COMPETITOR_LIMIT]) or "未抽取到明确competitor名"
     evidence_text = format_search_evidence(search_results, MAX_SEARCH_EVIDENCE_CHARS)
     own_params = own_param_text.strip() or "无"
 
     prompt = f"""
-你是用户研究和产品策略专家。请根据“竞品搜索结果”和“自己产品参数”生成一份调查问卷。
+你是user研究和产品strategy专家。请根据“competitor搜索结果”和“自己产品parameters”Generate一份调查questionnaire。
 
-产品/竞品方向:
+Product / competitor direction:
 {product_description}
 
 抽取到的相关产品:
 {competitor_text}
 
-自己产品参数:
+自己产品parameters:
 {own_params}
 
-竞品搜索结果:
+competitor搜索结果:
 {evidence_text}
 
 任务:
-生成 {QUESTION_COUNT} 个调查问卷题目，用于验证目标用户对这些相关产品/竞品的认知、使用、购买、替换意愿和关键决策因素。
+Generate {QUESTION_COUNT} 个调查Questionnaire items，用于验证目标user对这些相关产品/competitor的认知、使用、购买、替换意愿和关键决策因素。
 
 设计要求:
-- 问题必须围绕搜索结果中体现的竞品特点，以及自己产品参数中需要验证的对比点。
-- 如果自己产品参数里有定价/套餐/免费额度，必须设计价格敏感度、付费意愿或套餐偏好相关问题。
-- 覆盖维度应尽量包括：用户画像、当前使用工具、核心场景、功能重要性、竞品认知、竞品使用体验、痛点、替换门槛、价格/套餐、部署/安全/隐私、购买决策、NPS/推荐意愿。
-- 每个题目要能落地给真实用户填写，不要写成研究员内部分析问题。
-- 不要编造具体竞品事实；可基于搜索结果总结出的方向来设计问题。
-- 输出严格 JSON 数组，不要 Markdown，不要解释。
+- issueMust围绕搜索结果中体现的competitor特点，以及自己产品parameters中需要验证的对比点。
+- If自己产品parameters里有定价/套餐/免费额度，Must设计价格敏感度、付费意愿或套餐偏好相关issue。
+- 覆盖维度应尽量包括：user画像、当前使用工具、核心场景、功能重要性、competitor认知、competitor使用体验、痛点、替换门槛、价格/套餐、部署/安全/隐私、购买决策、NPS/推荐意愿。
+- Each题目要能落地给真实user填写，Do not写成研究员内部Analyzeissue。
+- Do not编造具体competitor事实；可基于搜索结果总结出的方向来设计issue。
+- 输出严格 JSON 数组，Do not Markdown，Do not解释。
 
-每个题目对象必须包含这些字段:
+Each题目对象Must包含这些字段:
 - id: 例如 Q001
 - dimension: 调研维度
 - question_type: single_choice / multiple_choice / scale_1_5 / ranking / text
-- question: 问题正文
+- question: issue正文
 - options: 选项数组；开放题填 []
-- target_insight: 这个问题想验证什么
-- related_competitor_points: 这个题目对应的竞品特点或自己产品参数点数组
-- source_basis: 这个题目设计依据，简短说明来自哪些搜索发现或参数点
+- target_insight: 这个issue想验证什么
+- related_competitor_points: 这个题目对应的competitor特点或自己产品parameters点数组
+- source_basis: 这个题目设计依据，简短note来自哪些搜索发现或parameters点
 
 示例:
 [
@@ -309,8 +311,8 @@ def generate_questionnaire(
     "question_type": "multiple_choice",
     "question": "你目前主要使用哪些同类产品或工具？",
     "options": ["产品A", "产品B", "产品C", "暂未使用", "其他，请注明"],
-    "target_insight": "了解目标用户当前竞品使用情况",
-    "related_competitor_points": ["竞品使用现状"],
+    "target_insight": "了解目标user当前competitor使用情况",
+    "related_competitor_points": ["competitor使用现状"],
     "source_basis": "来自抽取到的相关产品列表"
   }}
 ]
@@ -340,38 +342,38 @@ def simulate_response_batch(
     batch_size: int,
 ) -> list[dict[str, Any]]:
     api_key, base_url, model = active_llm_config()
-    competitor_text = "、".join(competitor_names[:COMPETITOR_LIMIT]) or "未抽取到明确竞品名"
+    competitor_text = "、".join(competitor_names[:COMPETITOR_LIMIT]) or "未抽取到明确competitor名"
     own_params = own_param_text.strip() or "无"
     questionnaire_json = compact_questionnaire(questionnaire_items)
     batch_end = batch_start + batch_size - 1
 
     prompt = f"""
-你是用户研究模拟器。请基于下面的问卷，模拟 {batch_size} 位不同受访者完整填写。
+你是user研究模拟器。请基于下面的questionnaire，模拟 {batch_size} 位不同受访者完整填写。
 
-产品/竞品方向:
+Product / competitor direction:
 {product_description}
 
-相关产品/竞品:
+相关产品/competitor:
 {competitor_text}
 
-自己产品参数:
+自己产品parameters:
 {own_params}
 
-问卷 JSON:
+questionnaire JSON:
 {questionnaire_json}
 
 受访者编号范围:
 R{batch_start:03d} 到 R{batch_end:03d}
 
 模拟要求:
-- 每个受访者必须有不同画像，覆盖不同经验、预算、行业、岗位、使用频率、当前工具和购买决策角色。
-- 每个受访者必须回答问卷中的每一个题目。
-- single_choice 只能选择一个选项；multiple_choice 可以选择多个选项；scale_1_5 必须给 1-5 的整数；ranking 给排序数组；text 给自然语言短答。
+- Each受访者Must有不同画像，覆盖不同经验、预算、行业、岗位、使用频率、当前工具和购买决策角色。
+- Each受访者Must回答questionnaire中的每一个题目。
+- single_choice 只能选择一个选项；multiple_choice 可以选择多个选项；scale_1_5 Must给 1-5 的整数；ranking 给排序数组；text 给自然语言短答。
 - 回答要自洽：画像、当前工具、预算、痛点和付费意愿要互相匹配。
 - 这是模拟数据，不能写“无法判断”“作为 AI”等措辞。
-- 输出严格 JSON 数组，不要 Markdown，不要解释。
+- 输出严格 JSON 数组，Do not Markdown，Do not解释。
 
-每个受访者对象格式:
+Each受访者对象格式:
 {{
   "respondent_id": "R001",
   "profile": {{
@@ -386,7 +388,7 @@ R{batch_start:03d} 到 R{batch_end:03d}
     {{
       "question_id": "Q001",
       "answer": "作答内容；多选/排序用数组，评分用数字",
-      "reason": "简短说明为什么这样回答"
+      "reason": "简短note为什么这样回答"
     }}
   ]
 }}
@@ -397,7 +399,7 @@ R{batch_start:03d} 到 R{batch_end:03d}
         base_url=base_url,
         model=model,
         messages=[
-            {"role": "system", "content": "你只输出严格 JSON 数组，模拟真实用户填写问卷。"},
+            {"role": "system", "content": "你只输出严格 JSON 数组，模拟真实user填写questionnaire。"},
             {"role": "user", "content": prompt},
         ],
         temperature=0.75,
@@ -418,7 +420,7 @@ def simulate_responses(
     while len(responses) < total_count:
         batch_start = len(responses) + 1
         batch_size = min(SIMULATION_BATCH_SIZE, total_count - len(responses))
-        print(f"[simulate] 生成 R{batch_start:03d}-R{batch_start + batch_size - 1:03d}")
+        print(f"[simulate] Generate R{batch_start:03d}-R{batch_start + batch_size - 1:03d}")
         batch = simulate_response_batch(
             product_description=product_description,
             own_param_text=own_param_text,
@@ -428,7 +430,7 @@ def simulate_responses(
             batch_size=batch_size,
         )
         if not batch:
-            raise RuntimeError("模型没有生成有效模拟回答。")
+            raise RuntimeError("模型没有Generate有效模拟回答。")
         responses.extend(batch)
     return responses[:total_count]
 
@@ -792,25 +794,25 @@ def build_direct_analysis_prompt(
     analysis_json = json_for_llm(code_analysis)
 
     return f"""
-你是用户研究数据分析师。请根据代码统计结果，写一份中文问卷数据分析报告。
+You are a user research data analyst。请根据Coding statistics，写一份中文questionnaire数据Analyze报告。
 
-产品/竞品方向:
+Product / competitor direction:
 {product_description}
 
-问卷题目:
+Questionnaire items:
 {compact_questions}
 
-代码统计结果:
+Coding statistics:
 {analysis_json}
 
-报告要求:
-- 用中文输出 Markdown。
-- 先说明样本规模和模拟数据属性。
-- 分析受访者画像分布。
-- 分析每个关键维度的结论：工具使用、功能优先级、痛点、价格敏感度、替换意愿、安全/部署/隐私、购买决策。
-- 标出最强信号、分歧点、潜在机会点、风险点。
-- 给出产品定位、定价/套餐、功能优先级、销售/获客、后续真实调研的建议。
-- 不要夸大样本；如果样本是模拟数据，要明确提示不能直接代表真实市场。
+Report requirements:
+- Write the Markdown output in English。
+- 先note样本规模和模拟数据属性。
+- Analyze受访者画像分布。
+- AnalyzeEach关键维度的结论：工具使用、功能优先级、痛点、价格敏感度、替换意愿、安全/部署/隐私、购买决策。
+- 标出最强信号、分歧点、潜在机会点、risk点。
+- 给出产品定位、定价/套餐、功能优先级、销售/获客、后续真实调研的suggestion。
+- Do not夸大样本；If样本是模拟数据，要明确提示不能直接代表真实市场。
 """.strip()
 
 
@@ -826,23 +828,23 @@ def summarize_response_chunk_with_llm(
 ) -> str:
     chunk_analysis = build_code_analysis(questionnaire_items, chunk)
     prompt = f"""
-你是用户研究数据分析师。下面是第 {chunk_index + 1}/{total_chunks} 批问卷答卷的代码统计结果，每批最多 {QUESTIONNAIRE_ANALYSIS_BATCH_SIZE} 份。
-请输出这一批的中文 Markdown 小结，不要写最终总报告。
+You are a user research data analyst。下面是第 {chunk_index + 1}/{total_chunks} 批questionnaire答卷的Coding statistics，每批最多 {QUESTIONNAIRE_ANALYSIS_BATCH_SIZE} 份。
+Please output这一批的中文 Markdown 小结，Do not写最终总报告。
 
-产品/竞品方向:
+Product / competitor direction:
 {product_description}
 
-问卷题目:
+Questionnaire items:
 {questionnaire_for_llm(questionnaire_items)}
 
-本批代码统计结果:
+本批Coding statistics:
 {json_for_llm(chunk_analysis)}
 
 小结要求:
 - 只基于本批统计，不编造数据。
-- 说明本批样本数、受访者画像、主要高频答案。
-- 特别概括开放题长文本中反复出现的主题，不要逐条复述长答案。
-- 标出本批最强信号、分歧点、机会点和风险点。
+- note本批样本数、受访者画像、主要高频答案。
+- 特别概括开放题长文本中反复出现的主题，Do not逐条复述长答案。
+- 标出本批最强信号、分歧点、机会点和risk点。
 - 输出尽量精炼，作为上一层汇总的输入。
 """.strip()
 
@@ -851,7 +853,7 @@ def summarize_response_chunk_with_llm(
         base_url=base_url,
         model=model,
         messages=[
-            {"role": "system", "content": "你根据一批问卷统计结果写中文用户研究批次小结。"},
+            {"role": "system", "content": "你根据一批questionnaire统计结果写中文user研究批次小结。"},
             {"role": "user", "content": prompt},
         ],
         temperature=0.2,
@@ -907,10 +909,10 @@ def merge_summary_group_with_llm(
 ) -> str:
     summary_text = "\n\n".join(summaries)
     prompt = f"""
-你是用户研究数据分析师。下面是问卷分块摘要的第 {level} 层输入，当前为第 {group_index + 1}/{total_groups} 组。
-请把这些摘要继续合并成更高一层中文 Markdown 摘要，不要写最终总报告。
+You are a user research data analyst。下面是questionnaire分块摘要的第 {level} 层输入，当前为第 {group_index + 1}/{total_groups} 组。
+Please merge这些摘要继续合并成更高一层中文 Markdown 摘要，Do not写最终总报告。
 
-产品/竞品方向:
+Product / competitor direction:
 {product_description}
 
 待合并摘要:
@@ -918,8 +920,8 @@ def merge_summary_group_with_llm(
 
 合并要求:
 - 保留跨批次反复出现的强信号。
-- 保留明显分歧、少数但重要的风险和机会。
-- 不要编造摘要中没有的数据。
+- 保留明显分歧、少数但重要的risk和机会。
+- Do not编造摘要中没有的数据。
 - 输出精炼，适合作为下一层汇总输入。
 """.strip()
 
@@ -928,7 +930,7 @@ def merge_summary_group_with_llm(
         base_url=base_url,
         model=model,
         messages=[
-            {"role": "system", "content": "你合并多批问卷小结，产出更高层用户研究摘要。"},
+            {"role": "system", "content": "你合并多批questionnaire小结，产出更高层user研究摘要。"},
             {"role": "user", "content": prompt},
         ],
         temperature=0.2,
@@ -987,29 +989,29 @@ def build_chunked_analysis_prompt(
     rollup_summary: str,
 ) -> str:
     return f"""
-你是用户研究数据分析师。请根据全局代码统计结果和分块上递摘要，写一份中文问卷数据分析报告。
+You are a user research data analyst。请根据全局Coding statistics和分块上递摘要，写一份中文questionnaire数据Analyze报告。
 
-产品/竞品方向:
+Product / competitor direction:
 {product_description}
 
-问卷题目:
+Questionnaire items:
 {questionnaire_for_llm(questionnaire_items)}
 
-全局代码统计结果（长文本已压缩，主要用于校准样本量、频数和数值结果）:
+全局Coding statistics（长文本已压缩，主要用于校准样本量、频数和数值结果）:
 {json_for_llm(code_analysis)}
 
 分块上递摘要（每 50 份答卷先统计和总结，再逐层合并）:
 {rollup_summary}
 
-报告要求:
-- 用中文输出 Markdown。
-- 先说明样本规模和模拟数据属性。
-- 分析受访者画像分布。
-- 分析每个关键维度的结论：工具使用、功能优先级、痛点、价格敏感度、替换意愿、安全/部署/隐私、购买决策。
-- 标出最强信号、分歧点、潜在机会点、风险点。
-- 给出产品定位、定价/套餐、功能优先级、销售/获客、后续真实调研的建议。
-- 开放题长文本结论优先依据分块上递摘要归纳，不要逐条复述原始长答案。
-- 不要夸大样本；如果样本是模拟数据，要明确提示不能直接代表真实市场。
+Report requirements:
+- Write the Markdown output in English。
+- 先note样本规模和模拟数据属性。
+- Analyze受访者画像分布。
+- AnalyzeEach关键维度的结论：工具使用、功能优先级、痛点、价格敏感度、替换意愿、安全/部署/隐私、购买决策。
+- 标出最强信号、分歧点、潜在机会点、risk点。
+- 给出产品定位、定价/套餐、功能优先级、销售/获客、后续真实调研的suggestion。
+- 开放题长文本结论优先依据分块上递摘要归纳，Do not逐条复述原始长答案。
+- Do not夸大样本；If样本是模拟数据，要明确提示不能直接代表真实市场。
 """.strip()
 
 
@@ -1053,7 +1055,7 @@ def analyze_survey_with_llm(
         base_url=base_url,
         model=model,
         messages=[
-            {"role": "system", "content": "你根据问卷统计结果写中文用户研究分析报告。"},
+            {"role": "system", "content": "你根据questionnaire统计结果写中文user研究Analyze报告。"},
             {"role": "user", "content": prompt},
         ],
         temperature=0.2,
@@ -1070,7 +1072,7 @@ def write_analysis_markdown(
     path = output_base_path(product_description, "analysis.md")
     output = "\n\n".join(
         [
-            "# 问卷数据分析报告",
+            "# questionnaire数据Analyze报告",
             "",
             analysis_markdown,
             "",
@@ -1105,7 +1107,7 @@ def main() -> None:
     if ANALYZE_ONLY:
         paths = [part.strip().strip('"') for part in re.split(r"[,;，；]", ANALYZE_ONLY) if part.strip()]
         if len(paths) < 2:
-            raise RuntimeError("ANALYZE_ONLY 需要两个路径：问卷jsonl,回答jsonl")
+            raise RuntimeError("ANALYZE_ONLY 需要两个路径：questionnairejsonl,回答jsonl")
         product_description = read_product_description()
         questionnaire_path = Path(paths[0])
         responses_path = Path(paths[1])
@@ -1113,9 +1115,9 @@ def main() -> None:
             questionnaire_path = ROOT / questionnaire_path
         if not responses_path.is_absolute():
             responses_path = ROOT / responses_path
-        print("\n===== 分析已有问卷数据 =====")
+        print("\n===== Analyze已有questionnaire数据 =====")
         analysis_path = analyze_response_files(questionnaire_path, responses_path, product_description)
-        print(f"已生成问卷分析报告: {analysis_path}")
+        print(f"已GeneratequestionnaireAnalyze报告: {analysis_path}")
         return
 
     if SearchSource(SEARCH_SOURCE) == SearchSource.BOCHA and not BOCHA_API_KEY:
@@ -1125,13 +1127,13 @@ def main() -> None:
 
     product_description = read_product_description()
     if not product_description:
-        raise RuntimeError("产品/竞品方向不能为空。")
+        raise RuntimeError("Product / competitor direction不能为空。")
 
     own_param_path, own_param_text = read_optional_text_file()
     if own_param_path:
-        print(f"[params] 已读取自己产品参数: {own_param_path}")
+        print(f"[params] 已读取自己产品parameters: {own_param_path}")
 
-    print("\n===== 搜索相关产品/竞品 =====")
+    print("\n===== 搜索相关产品/competitor =====")
     result = find_competitors(product_description)
 
     print("\n===== LLM 改写后的搜索词 =====")
@@ -1143,9 +1145,9 @@ def main() -> None:
         for index, name in enumerate(result.product_names[:COMPETITOR_LIMIT], 1):
             print(f"{index}. {name}")
     else:
-        print("未抽取到明确产品名，将仅根据搜索结果生成问卷。")
+        print("未抽取到明确产品名，将仅根据搜索结果Generatequestionnaire。")
 
-    print("\n===== 生成调查问卷 JSONL =====")
+    print("\n===== Generate调查questionnaire JSONL =====")
     items = generate_questionnaire(
         product_description=product_description,
         own_param_text=own_param_text,
@@ -1153,12 +1155,12 @@ def main() -> None:
         search_results=result.search_results,
     )
     if not items:
-        raise RuntimeError("模型没有生成有效问卷题目。")
+        raise RuntimeError("模型没有Generate有效Questionnaire items。")
 
     output_path = write_jsonl(items, product_description)
-    print(f"已生成 {len(items)} 个题目: {output_path}")
+    print(f"已Generate {len(items)} 个题目: {output_path}")
 
-    print(f"\n===== 调用豆包模拟填写 {SIMULATED_RESPONSE_COUNT} 份问卷 =====")
+    print(f"\n===== 调用豆包模拟填写 {SIMULATED_RESPONSE_COUNT} 份questionnaire =====")
     responses = simulate_responses(
         product_description=product_description,
         own_param_text=own_param_text,
@@ -1168,14 +1170,14 @@ def main() -> None:
     )
     response_jsonl_path = write_response_jsonl(responses, product_description)
     response_csv_path = write_response_csv(responses, items, product_description)
-    print(f"已生成 {len(responses)} 份模拟填写 JSONL: {response_jsonl_path}")
-    print(f"已生成 {len(responses)} 份模拟填写 CSV: {response_csv_path}")
+    print(f"已Generate {len(responses)} 份模拟填写 JSONL: {response_jsonl_path}")
+    print(f"已Generate {len(responses)} 份模拟填写 CSV: {response_csv_path}")
 
-    print("\n===== 分析问卷数据 =====")
+    print("\n===== Analyzequestionnaire数据 =====")
     code_analysis = build_code_analysis(items, responses)
     analysis_markdown = analyze_survey_with_llm(product_description, items, responses, code_analysis)
     analysis_path = write_analysis_markdown(analysis_markdown, product_description, code_analysis)
-    print(f"已生成问卷分析报告: {analysis_path}")
+    print(f"已GeneratequestionnaireAnalyze报告: {analysis_path}")
 
 
 if __name__ == "__main__":

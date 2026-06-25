@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+OUTPUT_LANGUAGE = "English"
+
 import csv
 import json
 import re
@@ -182,7 +184,7 @@ def _columns(table: Dict[str, Any], rows: Iterable[Dict[str, Any]]) -> List[str]
 
 
 def _competitor(row: Dict[str, Any]) -> str:
-    for key in ("competitor", "竞品", "竞品名称", "产品", "产品名称", "competitor_name"):
+    for key in ("competitor", "competitor", "competitor名称", "产品", "产品名称", "competitor_name"):
         value = clean_text(row.get(key), 120)
         if value:
             return value
@@ -190,7 +192,7 @@ def _competitor(row: Dict[str, Any]) -> str:
 
 
 def _evidence_ids(row: Dict[str, Any]) -> List[str]:
-    for key in ("evidence_ids", "证据ID", "支持证据ID", "支撑证据ID", "关联证据ID"):
+    for key in ("evidence_ids", "evidenceID", "支持evidenceID", "支撑evidenceID", "关联evidenceID"):
         value = row.get(key)
         if isinstance(value, list):
             return [clean_text(item, 80) for item in value if clean_text(item, 80)]

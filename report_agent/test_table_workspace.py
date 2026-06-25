@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+OUTPUT_LANGUAGE = "English"
+
 import sys
 from pathlib import Path
 
@@ -22,10 +24,10 @@ def sample_tables() -> list[dict]:
     return [
         {
             "table_name": "商业化定价",
-            "columns": ["竞品", "企业版定价", "计费单位", "证据ID"],
+            "columns": ["competitor", "企业版定价", "计费单位", "evidenceID"],
             "rows": [
-                {"竞品": "CodeBuddy", "企业版定价": "198元/月", "计费单位": "按席位"},
-                {"竞品": "qoder", "企业版定价": "待搜索"},
+                {"competitor": "CodeBuddy", "企业版定价": "198元/月", "计费单位": "按席位"},
+                {"competitor": "qoder", "企业版定价": "待搜索"},
             ],
         }
     ]

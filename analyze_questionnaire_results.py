@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+OUTPUT_LANGUAGE = "English"
+
 import csv
 import json
 import os
@@ -48,7 +50,7 @@ def active_llm_config() -> tuple[str, str, str]:
         return LLM1_API_KEY, LLM1_BASE_URL, LLM1_MODEL
     if LLM_PROVIDER == 2:
         return LLM2_API_KEY, LLM2_BASE_URL, LLM2_MODEL
-    raise ValueError("LLM_PROVIDER 必须是 0、1 或 2。")
+    raise ValueError("LLM_PROVIDER Must是 0、1 或 2。")
 
 
 def resolve_path(path_text: str) -> Path:
@@ -282,25 +284,25 @@ def build_analysis_prompt(
         analysis_json = analysis_json[:MAX_ANALYSIS_JSON_CHARS] + "\n...[已截断，保留前半部分统计结果]"
 
     return f"""
-你是用户研究数据分析师。请根据问卷题目和代码统计结果，写一份中文问卷数据分析报告。
+You are a user research data analyst。请根据Questionnaire items和Coding statistics，写一份中文questionnaire数据Analyze报告。
 
-产品/竞品方向:
+Product / competitor direction:
 {product_description}
 
-问卷题目:
+Questionnaire items:
 {compact_questions}
 
-代码统计结果:
+Coding statistics:
 {analysis_json}
 
-报告要求:
-- 用中文输出 Markdown。
-- 先说明样本规模，以及数据来源是模拟填写还是真实填写；如果无法确认，要明确写“无法仅凭文件判断是否为真实样本”。
-- 分析受访者画像分布。
+Report requirements:
+- Write the Markdown output in English。
+- 先note样本规模，以及数据source是模拟填写还是真实填写；If无法确认，要明确写“无法仅凭文件判断是否为真实样本”。
+- Analyze受访者画像分布。
 - 按关键维度总结结论：当前工具使用、核心场景、功能优先级、痛点、价格敏感度、替换意愿、安全/部署/隐私、购买决策。
-- 标出最强信号、明显分歧点、潜在机会点、主要风险点。
-- 给出产品定位、定价/套餐、功能优先级、销售/获客、后续真实调研的建议。
-- 不要夸大样本，不要编造统计结果中不存在的数据。
+- 标出最强信号、明显分歧点、潜在机会点、主要risk点。
+- 给出产品定位、定价/套餐、功能优先级、销售/获客、后续真实调研的suggestion。
+- Do not夸大样本，Do not编造统计结果中不存在的数据。
 """.strip()
 
 
@@ -312,13 +314,13 @@ def analyze_survey_with_llm(
     api_key, base_url, model = active_llm_config()
     prompt = build_analysis_prompt(product_description, questionnaire_items, code_analysis)
     messages = [
-        {"role": "system", "content": "你根据问卷统计结果写中文用户研究分析报告。"},
+        {"role": "system", "content": "你根据questionnaire统计结果写中文user研究Analyze报告。"},
         {"role": "user", "content": prompt},
     ]
 
     if ANALYSIS_STREAM:
         chunks = []
-        print("\n===== LLM 分析流式输出 =====")
+        print("\n===== LLM Analyze流式输出 =====")
         for chunk in stream_chat_content(
             api_key=api_key,
             base_url=base_url,
@@ -354,11 +356,11 @@ def write_analysis_markdown(
     path = output_base_path(product_description, "analysis.md")
     output = "\n\n".join(
         [
-            "# 问卷数据分析报告",
+            "# questionnaire数据Analyze报告",
             "",
-            f"- 问卷文件: `{questionnaire_path}`",
+            f"- questionnaire文件: `{questionnaire_path}`",
             f"- 回答文件: `{responses_path}`",
-            f"- 产品/竞品方向: {product_description}",
+            f"- Product / competitor direction: {product_description}",
             "",
             analysis_markdown.strip(),
             "",
@@ -380,17 +382,17 @@ def analyze_response_files(
 ) -> Path:
     questionnaire_items = normalize_questionnaire_items(read_jsonl(questionnaire_path))
     if not questionnaire_items:
-        raise RuntimeError("问卷文件中没有读到有效题目。")
+        raise RuntimeError("questionnaire文件中没有读到有效题目。")
 
     responses = read_responses(responses_path, questionnaire_items)
     if not responses:
         raise RuntimeError("回答文件中没有读到有效回答。")
 
-    print(f"[read] 问卷题目: {len(questionnaire_items)}")
+    print(f"[read] Questionnaire items: {len(questionnaire_items)}")
     print(f"[read] 回答样本: {len(responses)}")
     print("[analyze] 正在做代码统计...")
     code_analysis = build_code_analysis(questionnaire_items, responses)
-    print("[analyze] 正在调用 LLM 写中文分析报告...")
+    print("[analyze] 正在调用 LLM 写中文Analyze报告...")
     analysis_markdown = analyze_survey_with_llm(product_description, questionnaire_items, code_analysis)
     return write_analysis_markdown(
         analysis_markdown=analysis_markdown,
@@ -408,12 +410,12 @@ def read_cli_or_prompt() -> tuple[Path, Path, str]:
         responses_path = resolve_path(args[1])
         product_description = " ".join(args[2:]).strip() if len(args) > 2 else ""
     else:
-        questionnaire_path = resolve_path(input("请输入问卷 JSONL 路径: ").strip())
+        questionnaire_path = resolve_path(input("请输入questionnaire JSONL 路径: ").strip())
         responses_path = resolve_path(input("请输入回答 JSONL/CSV 路径: ").strip())
         product_description = ""
 
     if not product_description:
-        product_description = input("请输入产品/竞品方向: ").strip()
+        product_description = input("请输入Product / competitor direction: ").strip()
     if not product_description:
         product_description = questionnaire_path.stem
     return questionnaire_path, responses_path, product_description
@@ -426,17 +428,17 @@ def main() -> None:
 
     questionnaire_path, responses_path, product_description = read_cli_or_prompt()
     if not questionnaire_path.exists():
-        raise FileNotFoundError(f"问卷文件不存在: {questionnaire_path}")
+        raise FileNotFoundError(f"questionnaire文件不存在: {questionnaire_path}")
     if not responses_path.exists():
         raise FileNotFoundError(f"回答文件不存在: {responses_path}")
 
-    print("\n===== 分析已有问卷数据 =====")
-    print(f"[file] 问卷: {questionnaire_path}")
+    print("\n===== Analyze已有questionnaire数据 =====")
+    print(f"[file] questionnaire: {questionnaire_path}")
     print(f"[file] 回答: {responses_path}")
     print(f"[topic] {product_description}")
 
     analysis_path = analyze_response_files(questionnaire_path, responses_path, product_description)
-    print(f"\n已生成问卷分析报告: {analysis_path}")
+    print(f"\n已GeneratequestionnaireAnalyze报告: {analysis_path}")
 
 
 if __name__ == "__main__":

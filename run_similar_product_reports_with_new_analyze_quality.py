@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+OUTPUT_LANGUAGE = "English"
+
 import argparse
 import concurrent.futures
 import json
@@ -165,7 +167,7 @@ ANALYZE_TIMEOUT = int(os.getenv("ANALYZE_TIMEOUT", "1200"))
 FINAL_SUMMARY_TIMEOUT = int(os.getenv("FINAL_SUMMARY_TIMEOUT", "900"))
 
 # 运行模式：
-# 0 = 从头开始：找竞品 -> 单品分析 -> 总结 -> Report Agent 标准链路
+# 0 = 从头开始：找competitor -> 单品Analyze -> 总结 -> Report Agent 标准链路
 # 1 = 跳过前面步骤：直接读取 REPORT_AGENT_FROM_DIR 文件夹，进入 Report Agent 标准链路
 RUN_MODE = 0
 RUN_MODE = int(os.getenv("RUN_MODE", str(RUN_MODE)))
@@ -206,7 +208,7 @@ REPORT_AGENT_TABLE_GAP_SEARCH_RESULTS = int(
     os.getenv("REPORT_AGENT_TABLE_GAP_SEARCH_RESULTS", "6")
 )
 REPORT_AGENT_TABLE_GAP_SEARCH_MAX_ROUNDS = int(
-    os.getenv("REPORT_AGENT_TABLE_GAP_SEARCH_MAX_ROUNDS", "3")#表格缺口搜索循环轮数。
+    os.getenv("REPORT_AGENT_TABLE_GAP_SEARCH_MAX_ROUNDS", "3")#tablegap搜索循环轮数。
 )
 REPORT_AGENT_TABLE_GAP_SEARCH_WORKERS = int(
     os.getenv("REPORT_AGENT_TABLE_GAP_SEARCH_WORKERS", "0")
@@ -306,7 +308,7 @@ def parse_runtime_args() -> RuntimeArgs:
     parser.add_argument(
         "--report-agent-from-dir",
         default="",
-        help="跳过前置搜索/单品分析，直接读取该文件夹下的单品报告并运行 Report Agent 标准链路。",
+        help="跳过前置搜索/单品Analyze，直接读取该文件夹下的single-product report并运行 Report Agent 标准链路。",
     )
     parser.add_argument(
         "--report-agent-pattern",
@@ -316,12 +318,12 @@ def parse_runtime_args() -> RuntimeArgs:
     parser.add_argument(
         "--report-agent-product-description",
         default=REPORT_AGENT_PRODUCT_DESCRIPTION,
-        help="配合 --report-agent-from-dir 使用的原始需求/目标领域。不传则使用位置参数或文件夹名。",
+        help="配合 --report-agent-from-dir 使用的原始brief/目标领域。不传则使用位置parameters或文件夹名。",
     )
     parser.add_argument(
         "description",
         nargs="*",
-        help="产品需求；原有用法保持不变。",
+        help="产品brief；原有用法保持不变。",
     )
     args = parser.parse_args()
     report_agent_from_dir = str(args.report_agent_from_dir or "").strip()
@@ -399,14 +401,14 @@ def read_product_description(description_parts: list[str] | None = None) -> str:
     description = " ".join(description_parts or []).strip()
     if description:
         return description
-    return input("请输入产品需求: ").strip()
+    return input("请输入产品brief: ").strip()
 
 
 def read_known_product_param_text() -> tuple[str, str]:
     path_text = os.getenv("KNOWN_PRODUCT_PARAM_TXT", "").strip()
     if not path_text:
         path_text = (
-            input("请输入我方产品参数 txt 路径（可直接回车跳过）: ").strip().strip('"')
+            input("请输入我方产品parameters txt 路径（可直接回车跳过）: ").strip().strip('"')
         )
     if not path_text:
         return "", ""
@@ -415,17 +417,17 @@ def read_known_product_param_text() -> tuple[str, str]:
     if not path.is_absolute():
         path = ROOT / path
     if not path.exists():
-        print(f"[warn] 我方产品参数 txt 不存在，已跳过: {path}")
+        print(f"[warn] 我方产品parameters txt 不存在，已跳过: {path}")
         return "", ""
 
     text = path.read_text(encoding="utf-8", errors="replace").strip()
     if not text:
-        print(f"[warn] 我方产品参数 txt 为空，已跳过: {path}")
+        print(f"[warn] 我方产品parameters txt 为空，已跳过: {path}")
         return "", ""
     if KNOWN_PRODUCT_PARAM_MAX_CHARS > 0 and len(text) > KNOWN_PRODUCT_PARAM_MAX_CHARS:
         text = text[:KNOWN_PRODUCT_PARAM_MAX_CHARS]
         print(
-            f"[warn] 我方产品参数 txt 较长，已截取前 {KNOWN_PRODUCT_PARAM_MAX_CHARS} 字符。"
+            f"[warn] 我方产品parameters txt 较长，已截取前 {KNOWN_PRODUCT_PARAM_MAX_CHARS} 字符。"
         )
     return str(path), text
 
@@ -434,7 +436,7 @@ def read_questionnaire_analysis_text() -> tuple[str, str]:
     path_text = os.getenv("QUESTIONNAIRE_ANALYSIS_MD", "").strip()
     if not path_text:
         path_text = (
-            input("请输入问卷分析报告 md 路径（可直接回车跳过）: ").strip().strip('"')
+            input("请输入questionnaireAnalyze报告 md 路径（可直接回车跳过）: ").strip().strip('"')
         )
     if not path_text:
         return "", ""
@@ -443,7 +445,7 @@ def read_questionnaire_analysis_text() -> tuple[str, str]:
     if not path.is_absolute():
         path = ROOT / path
     if not path.exists():
-        print(f"[warn] 问卷分析报告不存在，已跳过: {path}")
+        print(f"[warn] questionnaireAnalyze报告不存在，已跳过: {path}")
         return "", ""
 
     text = path.read_text(encoding="utf-8", errors="replace").strip()
@@ -455,7 +457,7 @@ def read_questionnaire_analysis_text() -> tuple[str, str]:
     ):
         text = text[:QUESTIONNAIRE_ANALYSIS_MAX_CHARS]
         print(
-            f"[warn] 问卷分析正文较长，已截取前 {QUESTIONNAIRE_ANALYSIS_MAX_CHARS} 字符。"
+            f"[warn] questionnaireAnalyze正文较长，已截取前 {QUESTIONNAIRE_ANALYSIS_MAX_CHARS} 字符。"
         )
     return str(path), text
 
@@ -468,13 +470,13 @@ def read_optional_known_product_param_text() -> tuple[str, str]:
     if not path.is_absolute():
         path = ROOT / path
     if not path.exists():
-        print(f"[warn] 我方产品参数 txt 不存在，已跳过: {path}")
+        print(f"[warn] 我方产品parameters txt 不存在，已跳过: {path}")
         return "", ""
     text = path.read_text(encoding="utf-8", errors="replace").strip()
     if KNOWN_PRODUCT_PARAM_MAX_CHARS > 0 and len(text) > KNOWN_PRODUCT_PARAM_MAX_CHARS:
         text = text[:KNOWN_PRODUCT_PARAM_MAX_CHARS]
         print(
-            f"[warn] 我方产品参数 txt 较长，已截取前 {KNOWN_PRODUCT_PARAM_MAX_CHARS} 字符。"
+            f"[warn] 我方产品parameters txt 较长，已截取前 {KNOWN_PRODUCT_PARAM_MAX_CHARS} 字符。"
         )
     return str(path), text
 
@@ -487,7 +489,7 @@ def read_optional_questionnaire_analysis_text() -> tuple[str, str]:
     if not path.is_absolute():
         path = ROOT / path
     if not path.exists():
-        print(f"[warn] 问卷分析报告不存在，已跳过: {path}")
+        print(f"[warn] questionnaireAnalyze报告不存在，已跳过: {path}")
         return "", ""
     text = path.read_text(encoding="utf-8", errors="replace").strip()
     if QUESTIONNAIRE_CODE_SUMMARY_MARKER in text:
@@ -498,7 +500,7 @@ def read_optional_questionnaire_analysis_text() -> tuple[str, str]:
     ):
         text = text[:QUESTIONNAIRE_ANALYSIS_MAX_CHARS]
         print(
-            f"[warn] 问卷分析正文较长，已截取前 {QUESTIONNAIRE_ANALYSIS_MAX_CHARS} 字符。"
+            f"[warn] questionnaireAnalyze正文较长，已截取前 {QUESTIONNAIRE_ANALYSIS_MAX_CHARS} 字符。"
         )
     return str(path), text
 
@@ -511,33 +513,33 @@ def build_comparison_keyword_library(
 
     api_key, base_url, model = provider_llm_config()
     prompt = f"""
-你是竞品调研搜索关键词规划助手。
+你是competitor调研搜索关键词规划助手。
 
-用户想找的产品/竞品方向:
+user想找的Product / competitor direction:
 {product_description}
 
-我方产品参数 txt（注意: 这是用户自己的产品/我方产品参数，不是竞品参数）:
+我方产品parameters txt（注意: 这是user自己的产品/我方产品parameters，不是competitorparameters）:
 {known_param_text}
 
 任务:
-从我方产品参数中提炼“后续竞品调研必须共同对比的参数点”，并为每个参数点生成可用于搜索竞品资料的关键词。
+从我方产品parameters中提炼“后续competitor调研Must共同对比的parameters点”，并为Eachparameters点Generate可用于搜索competitor资料的关键词。
 
 要求:
-- 用中文输出。
-- 必须把 txt 理解为“我方产品基准参数”，不能当成竞品事实。
-- 只提炼和产品定位、价格、套餐、功能、技术能力、部署方式、平台支持、目标用户、限制、合规、安全、集成、售后、生态、使用场景等相关的参数点。
-- 如果 txt 里出现定价，就必须生成定价/套餐/收费/免费额度相关关键词。
-- 每个参数点给出 2-5 个搜索关键词，关键词要适合拼接到竞品名称后搜索。
-- 不要编造 txt 没有暗示的参数点；可以把同义项合并。
+- Write in English。
+- Must把 txt 理解为“我方产品基准parameters”，不能当成competitor事实。
+- 只提炼和产品定位、价格、套餐、功能、技术能力、部署方式、平台支持、目标user、限制、合规、安全、集成、售后、生态、使用场景等相关的parameters点。
+- If txt 里出现定价，就MustGenerate定价/套餐/收费/免费额度相关关键词。
+- Eachparameters点给出 2-5 个搜索关键词，关键词要适合拼接到competitor名称后搜索。
+- Do not编造 txt 没有暗示的parameters点；可以把同义项合并。
 - 输出尽量短，后续会作为搜索提示词库使用。
 
 输出格式:
-参数点: xxx
+parameters点: xxx
 搜索关键词: 关键词1, 关键词2, 关键词3
-说明: 为什么这个参数点需要对齐竞品比较
+note: 为什么这个parameters点需要对齐competitor比较
 """.strip()
 
-    print("\n===== 根据我方产品参数生成搜索关键词库 =====")
+    print("\n===== 根据我方产品parametersGenerate搜索关键词库 =====")
     library = chat_content(
         api_key=api_key,
         base_url=base_url,
@@ -545,7 +547,7 @@ def build_comparison_keyword_library(
         messages=[
             {
                 "role": "system",
-                "content": "你把我方产品参数提炼成竞品调研的共同对标搜索关键词库。",
+                "content": "你把我方产品parameters提炼成competitor调研的共同对标搜索关键词库。",
             },
             {"role": "user", "content": prompt},
         ],
@@ -566,9 +568,9 @@ def safe_filename(name: str) -> str:
 def report_subject_from_description(product_description: str) -> str:
     text = re.sub(r"\s+", " ", str(product_description or "")).strip()
     text = text.splitlines()[0].strip() if text else ""
-    text = re.sub(r"^(?:请|帮我|请帮我|麻烦|需要|生成|做一份|做|分析|关于)+", "", text).strip()
+    text = re.sub(r"^(?:请|帮我|请帮我|麻烦|需要|Generate|做一份|做|Analyze|关于)+", "", text).strip()
     text = re.sub(
-        r"(?:的)?(?:竞品分析报告|竞品对比报告|竞品分析|竞品对比|类似产品横向对比报告|横向对比报告|横向对比|类似产品|对比报告|分析报告|报告|推荐)$",
+        r"(?:的)?(?:competitorAnalyze报告|competitor对比报告|competitorAnalyze|competitor对比|类似产品cross-product comparison报告|cross-product comparison报告|cross-product comparison|类似产品|对比报告|Analyze报告|报告|推荐)$",
         "",
         text,
     ).strip(" ，,。；;：:")
@@ -658,11 +660,11 @@ def select_product_names(product_names: list[str]) -> list[str]:
         print(f"{index}. {name}")
 
     if product_names:
-        print("\n请输入要分析的产品序号，或直接输入新的产品名。")
-        print("多个产品建议用逗号分隔，例如: 1, 3, Cursor, 豆包 MarsCode")
+        print("\n请输入要Analyze的产品序号，或直接输入新的产品名。")
+        print("多个产品suggestion用逗号分隔，例如: 1, 3, Cursor, 豆包 MarsCode")
         print(f"直接回车默认选择前 {min(TOP_N, len(product_names))} 个。")
     else:
-        print("\n请输入要分析的产品名，多个产品用逗号分隔。")
+        print("\n请输入要Analyze的产品名，多个产品用逗号分隔。")
     while True:
         selection = input("请选择: ").strip()
         if not selection and product_names:
@@ -853,7 +855,7 @@ def read_report_inputs_from_dir(folder: Path, pattern: str = "*.md") -> list[Rep
         if path.is_file() and not should_skip_report_agent_source(path)
     ]
     if not paths:
-        raise RuntimeError(f"文件夹中没有匹配的单品报告: {folder} pattern={pattern}")
+        raise RuntimeError(f"文件夹中没有匹配的single-product report: {folder} pattern={pattern}")
 
     items: list[ReportInput] = []
     skipped: list[Path] = []
@@ -867,12 +869,12 @@ def read_report_inputs_from_dir(folder: Path, pattern: str = "*.md") -> list[Rep
     if not items:
         skipped_names = ", ".join(path.name for path in skipped[:8])
         raise RuntimeError(
-            "没有可用于 Report Agent 的单品报告；需要包含 "
+            "没有可用于 Report Agent 的single-product report；需要包含 "
             f"{FINAL_SUMMARY_MARKER} 或 {REFERENCE_EVIDENCE_MARKER}。已跳过: {skipped_names}"
         )
     if skipped:
         print(
-            "[report-agent] 已跳过非单品报告: "
+            "[report-agent] 已跳过非single-product report: "
             + ", ".join(path.name for path in skipped[:8])
             + (" ..." if len(skipped) > 8 else "")
         )
@@ -945,18 +947,18 @@ def build_report_agent_sources(
         )
 
     context_parts = [
-        f"用户原始需求: {product_description}",
-        "===== 我方产品参数关键词库 =====",
-        "用途: 这是用户自己的产品/我方产品参数提炼出的对标维度，不是竞品参数，也不是竞品事实。后续报告需要围绕这些参数检查各竞品是否有证据支撑，缺失时明确写未找到明确证据。",
+        f"user原始brief: {product_description}",
+        "===== 我方产品parameters关键词库 =====",
+        "用途: 这是user自己的产品/我方产品parameters提炼出的对标维度，不是competitorparameters，也不是competitor事实。后续报告需要围绕这些parameters检查各competitor是否有evidence支撑，缺失时明确写未找到明确evidence。",
         comparison_keyword_library.strip() or "无",
-        "===== 问卷分析补充背景 =====",
-        f"来源: {portable_source_url(questionnaire_analysis_path)}" if questionnaire_analysis_path else "来源: 无",
-        "用途: 这是需求侧、用户侧、采购侧和风险侧的补充背景。可用于校准用户画像、场景优先级、价格敏感度、替换意愿、采购顾虑和功能偏好，但不能当作某个竞品的官方事实。",
+        "===== questionnaireAnalyze补充背景 =====",
+        f"source: {portable_source_url(questionnaire_analysis_path)}" if questionnaire_analysis_path else "source: 无",
+        "用途: 这是brief侧、user侧、采购侧和risk侧的补充背景。可用于校准user画像、场景优先级、价格敏感度、替换意愿、采购顾虑和功能偏好，但不能当作某个competitor的官方事实。",
         questionnaire_analysis_text.strip() or "无",
     ]
     sources.append(
         {
-            "title": "用户需求、参数词库与问卷补充背景",
+            "title": "userbrief、parameters词库与questionnaire补充背景",
             "url": portable_source_url(questionnaire_analysis_path),
             "snippet": product_description,
             "content": "\n\n".join(context_parts),
@@ -1032,8 +1034,8 @@ def build_quality_feedback_goal(
         return base_goal
 
     target_names = {
-        "collector_agent": "数据采集/证据补充层",
-        "analyst_agent": "分析结构层",
+        "collector_agent": "数据采集/evidence补充层",
+        "analyst_agent": "Analyze结构层",
         "writer_agent": "报告撰写层",
     }
     lines = [
@@ -1041,7 +1043,7 @@ def build_quality_feedback_goal(
         "",
         f"===== Quality Agent 第 {round_index - 1} 轮反馈 =====",
         f"本轮打回层级: {target_names.get(retry_target, retry_target)}",
-        "必须优先修复以下问题；缺少证据时明确写未找到明确证据，不要编造。",
+        "Must优先修复以下issue；缺少evidence时明确写未找到明确evidence，Do not编造。",
     ]
     for message in messages[:10]:
         if retry_target != "none" and message.get("target_agent") != retry_target:
@@ -1071,17 +1073,17 @@ def build_feedback_search_queries(
     queries: list[str] = []
     for message in messages:
         description = str(message.get("description") or "")
-        if "用户需求、参数词库与问卷补充背景" in description:
+        if "userbrief、parameters词库与questionnaire补充背景" in description:
             continue
         fields = " ".join(str(item) for item in message.get("affected_fields") or [])
         focus_parts = [
             fields,
-            "官方 参数 价格 能效 规格 来源",
+            "官方 parameters 价格 能效 规格 source",
         ]
         if "导航" in description:
             focus_parts.append("官方详情页")
         if "过短" in description or "内容" in description:
-            focus_parts.append("详细评测 参数表")
+            focus_parts.append("详细评测 parameters表")
         focus = " ".join(part for part in focus_parts if part).strip()
         for name in product_names or [product_description]:
             queries.append(f"{name} {product_description} {focus}")
@@ -1150,7 +1152,7 @@ def collect_quality_feedback_sources(
     search_queries: list[str],
     product_description: str,
 ) -> tuple[list[dict[str, str]], list[str]]:
-    print("\n===== Collector Agent 质检补搜 =====")
+    print("\n===== Collector Agent QA补搜 =====")
     for query in search_queries:
         print(f"[quality-loop][collector] query: {query}")
 
@@ -1194,12 +1196,12 @@ def collect_quality_feedback_sources(
         supplemental_sources.append(
             {
                 "source_id": "quality_feedback_no_result",
-                "title": "Quality Agent 补搜未获得新证据",
+                "title": "Quality Agent 补搜未获得新evidence",
                 "url": "",
-                "snippet": "补搜没有获得可用新证据。",
+                "snippet": "补搜没有获得可用新evidence。",
                 "content": (
-                    f"针对 {product_description} 的质检补搜没有获得可用新证据。"
-                    "报告必须明确标注相关维度未找到明确证据，不能编造。"
+                    f"针对 {product_description} 的QA补搜没有获得可用新evidence。"
+                    "报告Must明确标注相关维度未找到明确evidence，不能编造。"
                 ),
                 "source": "quality_feedback_search",
                 "content_source": "quality_feedback_no_result",
@@ -1324,12 +1326,12 @@ def build_evidence_cards_markdown(package) -> str:
     }
 
     lines: list[str] = [
-        f"# {package.task_id} 证据卡索引",
+        f"# {package.task_id} evidence卡索引",
         "",
-        "用于通过 ev_ ID 回溯 Report Agent 的结论来源。搜索 `ev_084` 可直接定位对应证据卡。",
+        "用于通过 ev_ ID 回溯 Report Agent 的结论source。搜索 `ev_084` 可直接定位对应evidence卡。",
         "",
-        f"- 证据卡数量: {len(evidence_cards)}",
-        f"- 来源数量: {len(sources)}",
+        f"- evidence卡数量: {len(evidence_cards)}",
+        f"- source数量: {len(sources)}",
         "",
         "## 快速索引",
         "",
@@ -1342,19 +1344,19 @@ def build_evidence_cards_markdown(package) -> str:
         source_id = str(card.get("source_id") or "").strip()
         lines.append(
             "- "
-            f"{evidence_id or '未知证据'} | "
-            f"{card.get('competitor') or '未归属竞品'} | "
+            f"{evidence_id or '未知evidence'} | "
+            f"{card.get('competitor') or '未归属competitor'} | "
             f"{card.get('dimension') or 'unknown'} | "
             f"{source_id or '无 source_id'} | "
             f"{_short_text(card.get('claim'))}"
         )
 
-    lines.extend(["", "## 证据卡详情", ""])
+    lines.extend(["", "## evidence卡详情", ""])
 
     for card in evidence_cards:
         if not isinstance(card, dict):
             continue
-        evidence_id = str(card.get("evidence_id") or "未知证据").strip()
+        evidence_id = str(card.get("evidence_id") or "未知evidence").strip()
         source_id = str(card.get("source_id") or "").strip()
         source = source_by_id.get(source_id, {})
         source_url = portable_source_url(source.get("url") or "")
@@ -1364,14 +1366,14 @@ def build_evidence_cards_markdown(package) -> str:
                 "",
                 f"### {evidence_id}",
                 "",
-                f"- 竞品: {card.get('competitor') or '未归属竞品'}",
+                f"- competitor: {card.get('competitor') or '未归属competitor'}",
                 f"- 维度: {card.get('dimension') or 'unknown'}",
                 f"- 置信度: {card.get('confidence')}",
                 f"- 时效性: {card.get('freshness') or 'unknown'}",
                 f"- source_id: {source_id or '无'}",
-                f"- 来源标题: {source.get('title') or '无'}",
-                f"- 来源URL: {source_url or '无'}",
-                f"- 来源类型: {source.get('source') or '无'}",
+                f"- source标题: {source.get('title') or '无'}",
+                f"- sourceURL: {source_url or '无'}",
+                f"- source类型: {source.get('source') or '无'}",
                 f"- content_source: {source.get('content_source') or '无'}",
                 "",
                 "**结论 claim**",
@@ -1389,11 +1391,11 @@ def build_evidence_cards_markdown(package) -> str:
             ]
         )
 
-    lines.extend(["## 来源详情", ""])
+    lines.extend(["## source详情", ""])
     for source in sources:
         if not isinstance(source, dict):
             continue
-        source_id = str(source.get("source_id") or "未知来源").strip()
+        source_id = str(source.get("source_id") or "未知source").strip()
         source_url = portable_source_url(source.get("url") or "")
         lines.extend(
             [
@@ -1401,7 +1403,7 @@ def build_evidence_cards_markdown(package) -> str:
                 "",
                 f"- 标题: {source.get('title') or '无'}",
                 f"- URL: {source_url or '无'}",
-                f"- 来源类型: {source.get('source') or '无'}",
+                f"- source类型: {source.get('source') or '无'}",
                 f"- content_source: {source.get('content_source') or '无'}",
                 f"- 发布日期: {source.get('publish_date') or '无'}",
                 "",
@@ -1426,13 +1428,13 @@ def generate_report_agent_analysis(
     quality_config = build_quality_config()
     product_names = [item.product_name for item in items]
     analysis_goal = (
-        "基于上游单品调研报告、参考点、我方产品参数词库和问卷分析，"
-        "生成面向产品经理的竞品横向分析报告，覆盖证据卡、PM洞察、竞品画像、"
-        "能力对比、SWOT 和产品策略建议。我方产品参数词库来自用户自己的产品，"
-        "不是竞品事实；必须优先围绕这些我方参数做共同维度对齐，"
-        "并使用问卷分析校准目标用户、使用场景、价格敏感度、替换意愿、采购顾虑和风险判断。"
+        "基于上游单品调研报告、参考点、我方产品parameters词库和questionnaireAnalyze，"
+        "Generate面向产品经理的competitor横向Analyze报告，覆盖evidence卡、PM洞察、competitor画像、"
+        "能力对比、SWOT 和产品strategysuggestion。我方产品parameters词库来自user自己的产品，"
+        "不是competitor事实；Must优先围绕这些我方parameters做共同维度对齐，"
+        "并使用questionnaireAnalyze校准目标user、使用场景、价格敏感度、替换意愿、采购顾虑和risk判断。"
     )
-    target_domain = f"{product_description} 竞品横向分析"
+    target_domain = f"{product_description} competitor横向Analyze"
     sources = build_report_agent_sources(
         items,
         product_description,
@@ -1441,7 +1443,7 @@ def generate_report_agent_analysis(
         questionnaire_analysis_path,
     )
 
-    print("\n===== Report Agent 标准分析链路 =====")
+    print("\n===== Report Agent 标准Analyze链路 =====")
     print(
         "将调用: evidence_structurer -> insight_extractor -> comparison_builder "
         "-> swot_generator -> strategy_recommender -> report_composer"
@@ -1486,7 +1488,7 @@ def generate_report_agent_analysis(
         if not REPORT_AGENT_QUALITY_ENABLED:
             break
 
-        print("\n===== Quality Agent 质检 =====")
+        print("\n===== Quality Agent QA =====")
         quality_report = inspect_report_package(package, config=quality_config)
         feedback_payload = normalize_quality_feedback_payload(
             build_feedback_payload(quality_report, task_id=task_id),
@@ -1514,7 +1516,7 @@ def generate_report_agent_analysis(
             retry_target = "none"
             break
         if round_index >= max_rounds:
-            print("[quality-loop] 已达到最大轮数，保留最后一轮报告和质检反馈。")
+            print("[quality-loop] 已达到最大轮数，保留最后一轮报告和QA反馈。")
             break
 
     output_dir = task_report_dir(timestamp)
@@ -1523,7 +1525,7 @@ def generate_report_agent_analysis(
     json_path = output_dir / f"{timestamp}_REPORT_AGENT_PACKAGE.json"
     evidence_cards_path = output_dir / f"{timestamp}_REPORT_AGENT_EVIDENCE_CARDS.md"
     if package is None:
-        raise RuntimeError("Report Agent 未生成有效输出。")
+        raise RuntimeError("Report Agent 未Generate有效输出。")
     final_workflow_passed = bool(
         quality_report is not None and not feedback_payload.get("retry_required")
     )
@@ -1549,14 +1551,14 @@ def generate_report_agent_analysis(
     report_subject = report_subject_from_description(product_description)
     md_output = "\n\n".join(
         [
-            f"# Report Agent 标准{report_subject}竞品分析报告（含 Quality Agent 闭环）",
+            f"# Report Agent 标准{report_subject}competitorAnalyze报告（含 Quality Agent 闭环）",
             "",
-            f"原始需求: {product_description}",
+            f"原始brief: {product_description}",
             f"参与产品: {'、'.join(product_names)}",
             f"Quality Agent: {'启用' if REPORT_AGENT_QUALITY_ENABLED else '禁用'}",
             f"最终工作流通过: {final_workflow_passed}",
-            f"最终质检分数通过: {quality_report.passed if quality_report else 'N/A'}",
-            f"最终质检分数: {quality_report.score if quality_report else 'N/A'}",
+            f"最终QA分数通过: {quality_report.passed if quality_report else 'N/A'}",
+            f"最终QA分数: {quality_report.score if quality_report else 'N/A'}",
             f"最终打回层级: {retry_target}",
             "",
             package.report_markdown,
@@ -1564,12 +1566,12 @@ def generate_report_agent_analysis(
             "## 质量闭环摘要",
             f"- Quality Agent: {'启用' if REPORT_AGENT_QUALITY_ENABLED else '禁用'}",
             f"- 最终工作流通过: {final_workflow_passed}",
-            f"- 最终质检分数通过: {quality_report.passed if quality_report else 'N/A'}",
-            f"- 最终质检分数: {quality_report.score if quality_report else 'N/A'}",
+            f"- 最终QA分数通过: {quality_report.passed if quality_report else 'N/A'}",
+            f"- 最终QA分数: {quality_report.score if quality_report else 'N/A'}",
             f"- Issue 数: {len(quality_report.issues) if quality_report else 'N/A'}",
             f"- 打回层级: {retry_target}",
             "",
-            f"结构化数据已单独保存为 Package JSON；证据卡索引已保存为 {evidence_cards_path}；质检明细保存在 quality_workflow 文件夹中。",
+            f"结构化数据已单独保存为 Package JSON；evidence卡索引已保存为 {evidence_cards_path}；QA明细保存在 quality_workflow 文件夹中。",
             "",
         ]
     )
@@ -1595,8 +1597,8 @@ def run_report_agent_from_dir(runtime_args: RuntimeArgs) -> tuple[Path, Path]:
     print("\n===== 跳过前置步骤，直接读取文件夹运行 Report Agent =====")
     print(f"source_dir: {folder}")
     print(f"pattern: {runtime_args.report_agent_pattern}")
-    print(f"原始需求/目标领域: {product_description}")
-    print("读取到的单品报告:")
+    print(f"原始brief/目标领域: {product_description}")
+    print("读取到的single-product report:")
     for index, item in enumerate(items, 1):
         print(f"{index}. {item.product_name} -> {item.path}")
 
@@ -1607,13 +1609,13 @@ def run_report_agent_from_dir(runtime_args: RuntimeArgs) -> tuple[Path, Path]:
             product_description,
             known_param_text,
         )
-        print(f"\n已读取我方产品参数: {known_param_path}")
+        print(f"\n已读取我方产品parameters: {known_param_path}")
 
     questionnaire_analysis_path, questionnaire_analysis_text = (
         read_optional_questionnaire_analysis_text()
     )
     if questionnaire_analysis_path:
-        print(f"\n已读取问卷分析报告: {questionnaire_analysis_path}")
+        print(f"\n已读取questionnaireAnalyze报告: {questionnaire_analysis_path}")
 
     md_path, json_path, evidence_cards_path = generate_report_agent_analysis(
         items,
@@ -1662,7 +1664,7 @@ def summarize_all_reports(
                 f"{report_agent_evidence_cards_path}"
             )
         except Exception as exc:
-            print(f"[warn] Report Agent 标准分析链路失败，继续生成原大总结: {exc}")
+            print(f"[warn] Report Agent 标准Analyze链路失败，继续Generate原大总结: {exc}")
 
     summaries = "\n\n".join(
         f"## {item.product_name}\n{item.final_summary}" for item in items
@@ -1672,45 +1674,45 @@ def summarize_all_reports(
     )
     product_names = "、".join(item.product_name for item in items)
     prompt = f"""
-你是产品策略分析师。请根据单品报告的 FINAL SUMMARY 正文，并结合可选的问卷分析补充背景，写一份中文横向对比总结。
+You are a product strategy analyst。请根据single-product report的 FINAL SUMMARY 正文，并结合可选的questionnaireAnalyze补充背景，写一份中文cross-product comparison总结。
 
-用户原始需求:
+user原始brief:
 {product_description}
 
-我方产品参数关键词库（来自用户自己的产品，不是竞品参数）:
+我方产品parameters关键词库（来自user自己的产品，不是competitorparameters）:
 {comparison_keyword_library.strip() or "无"}
 
 参与对比的产品:
 {product_names}
 
-问卷分析补充背景:
+questionnaireAnalyze补充背景:
 {questionnaire_analysis_text.strip() or "无"}
 
 单品 FINAL SUMMARY:
 {summaries}
 
 输出要求:
-- 用中文输出。
-- 分析每个产品的定位、核心能力、优势、短板、适合用户和不适合场景。
-- 尽量保留后续报告分析需要的信息：目标用户、核心场景、产品形态/入口、商业模式/定价、关键能力、限制或风险、用户反馈和证据引用。
-- 如果“我方产品参数关键词库”不为空，请优先按这些共同参数点做横向对比；这些参数来自我方产品，不是竞品事实，缺失证据的竞品参数点要说明未找到明确证据。
-- 如果“问卷分析补充背景”不为空，请结合其中的用户画像、场景、价格敏感度、替换意愿、采购决策、风险顾虑，生成更多维度、更丰富的横向分析。
-- 不要在正文里输出旧格式“详细 Issue 清单”。Quality Agent 会在质检阶段读取最后正文，并按正文大章节逐段生成 issue。
-- 最后正文请分成清晰的大章节；每个大章节要便于 Quality Agent 形成“关于xxx的修改建议”。
-- 如果某个大章节包含表格，表格中缺失或待确认的数据请写成“待搜索/未找到明确证据”，后续 Quality Agent 会把该表格章节的 issue 写成“建议人工搜索xxx”。
-- 必须输出“业务闭环指标”章节，至少覆盖效率（节省人工阅读/搜索时间的估计口径）、覆盖度（参考点/来源/产品维度）、一致性（结构化字段和质检问题）、人工修正率（哪些结论需要人工确认）。
-- 给出横向对比和选择建议。
-- 单品事实和引用必须来自单品 FINAL SUMMARY；问卷分析只能作为需求侧、用户侧、决策侧补充，不要把问卷结论当成某个产品的官方事实。
+- Write in English。
+- AnalyzeEach产品的定位、核心能力、优势、短板、适合user和不适合场景。
+- 尽量保留后续报告Analyze需要的信息：目标user、核心场景、产品形态/入口、商业模式/定价、关键能力、限制或risk、user反馈和evidence引用。
+- If“我方产品parameters关键词库”不为空，请优先按这些共同parameters点做cross-product comparison；这些parameters来自我方产品，不是competitor事实，缺失evidence的competitorparameters点要note未找到明确evidence。
+- If“questionnaireAnalyze补充背景”不为空，请结合其中的user画像、场景、价格敏感度、替换意愿、采购决策、risk顾虑，Generate更多维度、更丰富的横向Analyze。
+- Do not在正文里输出旧格式“详细 Issue 清单”。Quality Agent 会在QA阶段读取最后正文，并按正文大章节逐段Generate issue。
+- 最后正文请分成清晰的大章节；Each大章节要便于 Quality Agent 形成“关于xxx的修改suggestion”。
+- If某个大章节包含table，table中缺失或待确认的数据请写成“待搜索/未找到明确evidence”，后续 Quality Agent 会把该table章节的 issue 写成“suggestion人工搜索xxx”。
+- Must输出“业务闭环指标”章节，至少覆盖效率（节省人工阅读/搜索时间的估计口径）、覆盖度（参考点/source/产品维度）、一致性（结构化字段和QAissue）、人工修正率（哪些结论需要人工确认）。
+- 给出cross-product comparison和选择suggestion。
+- 单品事实和引用Must来自单品 FINAL SUMMARY；questionnaireAnalyze只能作为brief侧、user侧、决策侧补充，Do not把questionnaire结论当成某个产品的官方事实。
 - 保留原文里已有的引用标记，例如 [产品名][参考点15]。
-- 不要编造单品 FINAL SUMMARY 里没有的信息。
+- Do not编造单品 FINAL SUMMARY 里没有的信息。
 """.strip()
 
-    print("\n===== 生成所选产品大总结 =====")
+    print("\n===== Generate所选产品大总结 =====")
     api_key, base_url, model = final_llm_config()
     messages = [
         {
             "role": "system",
-            "content": "你把多份产品调研总结合并成一份有引用标记的中文横向对比报告。",
+            "content": "你把多份产品调研总结合并成一份有引用标记的中文cross-product comparison报告。",
         },
         {"role": "user", "content": prompt},
     ]
@@ -1747,27 +1749,27 @@ def summarize_all_reports(
     report_subject = report_subject_from_description(product_description)
     output = "\n\n".join(
         [
-            f"# {report_subject}类似产品横向对比报告",
+            f"# {report_subject}类似产品cross-product comparison报告",
             "",
-            f"原始需求: {product_description}",
+            f"原始brief: {product_description}",
             "",
-            "## 最终横向对比摘要",
+            "## 最终cross-product comparison摘要",
             final_summary,
             "",
             "## 相关文件",
             (
-                f"- Report Agent 标准分析: {report_agent_md_path}\n"
+                f"- Report Agent 标准Analyze: {report_agent_md_path}\n"
                 f"- Report Agent 结构化包: {report_agent_json_path}\n"
-                f"- Report Agent 证据卡索引: {report_agent_evidence_cards_path}"
+                f"- Report Agent evidence卡索引: {report_agent_evidence_cards_path}"
             )
             if (
                 report_agent_md_path
                 and report_agent_json_path
                 and report_agent_evidence_cards_path
             )
-            else "- Report Agent 标准分析: 未生成或已禁用",
-            f"- 问卷分析补充: {questionnaire_analysis_path or '无'}",
-            "- 单品报告、参考点和质检轮次请在当前任务文件夹内查看。",
+            else "- Report Agent 标准Analyze: 未Generate或已禁用",
+            f"- questionnaireAnalyze补充: {questionnaire_analysis_path or '无'}",
+            "- single-product report、参考点和QA轮次请在当前任务文件夹内查看。",
             "",
         ]
     )
@@ -1805,7 +1807,7 @@ def main() -> None:
             and not BOCHA_API_KEY
         ):
             print(
-                "[warn] 未配置 BOCHA_API_KEY，Report Agent 可运行，但表格待搜索回填可能失败。"
+                "[warn] 未配置 BOCHA_API_KEY，Report Agent 可运行，但table待搜索回填可能失败。"
             )
         run_report_agent_from_dir(runtime_args)
         return
@@ -1821,7 +1823,7 @@ def main() -> None:
 
     product_description = read_product_description(runtime_args.description_parts)
     if not product_description:
-        raise RuntimeError("产品需求不能为空。")
+        raise RuntimeError("产品brief不能为空。")
 
     known_param_path, known_param_text = read_known_product_param_text()
     comparison_keyword_library = build_comparison_keyword_library(
@@ -1829,13 +1831,13 @@ def main() -> None:
         known_param_text,
     )
     if known_param_path:
-        print(f"\n已读取我方产品参数: {known_param_path}")
+        print(f"\n已读取我方产品parameters: {known_param_path}")
 
     questionnaire_analysis_path, questionnaire_analysis_text = (
         read_questionnaire_analysis_text()
     )
     if questionnaire_analysis_path:
-        print(f"\n已读取问卷分析报告: {questionnaire_analysis_path}")
+        print(f"\n已读取questionnaireAnalyze报告: {questionnaire_analysis_path}")
 
     queries, product_names = find_product_names(product_description)
 
@@ -1847,12 +1849,12 @@ def main() -> None:
     if not targets:
         return
 
-    print("\n===== 将要分析的产品 =====")
+    print("\n===== 将要Analyze的产品 =====")
     for index, name in enumerate(targets, 1):
         print(f"{index}. {name}")
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    print("\n===== 启动独立命令行窗口分析 =====")
+    print("\n===== 启动独立命令行窗口Analyze =====")
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(targets)) as executor:
         future_to_name = {
             executor.submit(
@@ -1885,9 +1887,9 @@ def main() -> None:
                 print(f"[failed] {name}: {exc}")
 
     print(
-        f"\n{len(targets)} 个分析窗口已经启动。每个窗口会独立显示进度，并把报告写入 reports 目录。"
+        f"\n{len(targets)} 个Analyze窗口已经启动。Each窗口会独立显示进度，并把报告写入 reports 目录。"
     )
-    print("\n===== 等待所选产品分析报告完成 =====")
+    print("\n===== 等待所选产品Analyze报告完成 =====")
     report_paths = wait_for_reports(targets, timestamp)
     if len(report_paths) < len(targets):
         print("[warn] 报告数量不足，跳过总总结。")

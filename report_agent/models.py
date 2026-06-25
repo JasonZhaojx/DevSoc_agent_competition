@@ -2,10 +2,12 @@
 
 本模块只定义跨节点传递的数据结构，不包含业务逻辑。这样做可以让
 Evidence/Insight/SWOT/Report 各节点的输入输出边界保持稳定，也方便
-下游质检 Agent 直接消费 `ReportPackage`。
+下游QA Agent 直接消费 `ReportPackage`。
 """
 
 from __future__ import annotations
+
+OUTPUT_LANGUAGE = "English"
 
 import json
 import os
@@ -104,7 +106,7 @@ class SourceRecord:
     """上游搜索结果的标准化形态。
 
     上游可能传入 SearchResult、dict 或任意对象；进入写作链路前统一转成
-    SourceRecord，后续所有 evidence 都通过 `source_id` 回溯到这里。
+    SourceRecord，后续All evidence 都通过 `source_id` 回溯到这里。
     """
 
     source_id: str
@@ -124,10 +126,10 @@ class SourceRecord:
 
 @dataclass
 class EvidenceCard:
-    """最小证据单元。
+    """最小evidence单元。
 
-    一张卡只表达一个 claim，并保留原文片段。后续洞察、SWOT、策略建议都
-    必须绑定 evidence_id，避免报告变成无来源的自然语言总结。
+    一张卡只表达一个 claim，并保留原文片段。后续洞察、SWOT、strategysuggestion都
+    Must绑定 evidence_id，避免报告变成无source的自然语言总结。
     """
 
     evidence_id: str
@@ -165,7 +167,7 @@ class PMInsight:
 class SWOTItem:
     """SWOT 条目。
 
-    每条 SWOT 都需要说明结论、影响、PM 启发和证据来源，防止生成空泛模板。
+    每条 SWOT 都需要note结论、影响、PM 启发和evidencesource，防止Generate空泛模板。
     """
 
     point: str
@@ -191,7 +193,7 @@ class SWOTResult:
 
 @dataclass
 class ProductRecommendation:
-    """面向产品行动的策略建议，默认用于 30/60/90 天路线图。"""
+    """面向产品行动的strategysuggestion，默认用于 30/60/90 天路线图。"""
 
     priority: str
     timeframe: str
@@ -236,7 +238,7 @@ class ReportState:
 class ReportPackage:
     """写作 Agent 的最终输出包。
 
-    下游检测模块需要的不只是 Markdown，还包括结构化分析、证据映射和生成轨迹。
+    下游检测模块需要的不只是 Markdown，还包括结构化Analyze、evidence映射和Generate轨迹。
     """
 
     task_id: str

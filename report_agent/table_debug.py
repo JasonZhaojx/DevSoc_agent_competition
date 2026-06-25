@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+OUTPUT_LANGUAGE = "English"
+
 import json
 from typing import Any, Dict, Iterable, List, Sequence
 
@@ -38,7 +40,7 @@ def _render_tables(tables: Sequence[Dict[str, Any]]) -> str:
     for table in tables:
         if not isinstance(table, dict):
             continue
-        name = clean_text(table.get("table_name") or "横向对比表", 80)
+        name = clean_text(table.get("table_name") or "cross-product comparison表", 80)
         rows = table.get("rows") if isinstance(table.get("rows"), list) else table.get("dimensions")
         if not isinstance(rows, list):
             rows = []

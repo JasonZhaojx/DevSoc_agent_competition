@@ -8,6 +8,8 @@ input and optional report-generation settings.
 
 from __future__ import annotations
 
+OUTPUT_LANGUAGE = "English"
+
 import os
 import re
 import sys
@@ -124,7 +126,7 @@ def run_search_and_report(
 
     report_goal = (
         analysis_goal.strip()
-        or f"基于搜索结果，为 {description} 生成竞品分析报告"
+        or f"基于搜索结果，为 {description} GeneratecompetitorAnalyze报告"
     )
     report_domain = target_domain.strip() or description
     package = run_writing_agent(

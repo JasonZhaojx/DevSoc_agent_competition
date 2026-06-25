@@ -1,10 +1,12 @@
 """报告撰写 Agent。
 
-Composer 只负责表达，把结构化分析渲染为 Markdown。它不重新搜索、不重新推理，
+Composer 只负责表达，把结构化Analyze渲染为 Markdown。它不重新搜索、不重新推理，
 也不新增 evidence/insight/SWOT/recommendation 之外的事实。
 """
 
 from __future__ import annotations
+
+OUTPUT_LANGUAGE = "English"
 
 import json
 import re
@@ -19,7 +21,7 @@ except ImportError:
 
 
 def compose_report(state: ReportState, config: WritingAgentConfig) -> str:
-    """生成最终 Markdown 报告。"""
+    """Generate最终 Markdown 报告。"""
 
     use_llm_composer = getattr(config, "use_llm_report_composer", False)
     if not use_llm_composer:
@@ -38,34 +40,34 @@ def compose_report(state: ReportState, config: WritingAgentConfig) -> str:
 
 
 def _report_from_llm(state: ReportState, config: WritingAgentConfig) -> str:
-    """让 LLM 根据结构化分析润色报告。
+    """让 LLM 根据结构化Analyze润色报告。
 
-    这里要求模型返回 JSON，是为了继续用程序校验输出；如果返回失败，直接走
+    这里要求模型返回 JSON，是为了继续用程序校验输出；If返回失败，直接走
     本地 Markdown fallback。
     """
 
     data = call_json_llm(
         config=config,
-        system_prompt="你是面向产品经理写竞品分析报告的专家，只输出 JSON。",
+        system_prompt="你是面向产品经理写competitorAnalyze报告的专家，只Output JSON。",
         user_prompt=f"""
-你只能基于下面结构化分析写报告，不要新增事实。
+你只能基于下面结构化Analyze写报告，Do not新增事实。
 
-结构化分析:
+结构化Analyze:
 {json.dumps(_structured_payload(state), ensure_ascii=False, indent=2)}
 
-资料来源:
+资料source:
 {json.dumps([source.to_dict() for source in state.sources], ensure_ascii=False, indent=2)}
 
 请返回严格 JSON:
 {{"report_markdown": "Markdown 正文"}}
 
-报告必须包含这些章节:
-核心结论、分析背景与目标、竞品分类、用户场景、重点竞品拆解、横向能力对比、SWOT、产品机会点与风险、产品策略建议、资料来源。
+报告Must包含这些章节:
+核心结论、Analyze背景与目标、competitor分类、user场景、重点competitor拆解、横向能力对比、SWOT、产品机会点与risk、产品strategysuggestion、资料source。
 补充要求:
-- 如果结构化分析包含我方产品参数词库或已知产品参数词库，报告必须单独体现“共同参数对齐”视角：这些参数来自用户自己的产品/我方产品，不是竞品事实；说明哪些竞品参数有证据、哪些缺证据、哪些参数决定产品选择。
-- 如果结构化分析包含问卷分析，报告必须单独体现“用户/采购侧校准”视角：用户画像、场景优先级、价格敏感度、替换意愿、采购顾虑和风险偏好如何影响判断。
-- 要明确区分“竞品事实证据”和“问卷/用户侧证据”：问卷结论只能用于需求侧和决策侧判断，不能写成某竞品官方功能或承诺。
-- 不要输出空表格；如果某个单元格没有证据，请写“未找到明确证据”，如果整张表缺少有效数据，请写“暂无可渲染对比数据”。
+- If结构化Analyze包含我方产品parameters词库或已知产品parameters词库，报告Must单独体现“共同parameters对齐”视角：这些parameters来自user自己的产品/我方产品，不是competitor事实；note哪些competitorparameters有evidence、哪些缺evidence、哪些parameters决定产品选择。
+- If结构化Analyze包含questionnaireAnalyze，报告Must单独体现“user/采购侧校准”视角：user画像、场景优先级、价格敏感度、替换意愿、采购顾虑和risk偏好如何影响判断。
+- 要明确区分“competitor事实evidence”和“questionnaire/user侧evidence”：questionnaire结论只能用于brief侧和决策侧判断，不能写成某competitor官方功能或承诺。
+- Do not输出空table；If某个单元格没有evidence，请写“未找到明确evidence”，If整张表缺少有效数据，请写“暂无可渲染对比数据”。
 """.strip(),
     )
     if isinstance(data, dict):
@@ -81,58 +83,58 @@ def _fallback_report_markdown(state: ReportState) -> str:
     """
 
     lines: List[str] = [
-        f"# {state.target_domain} 竞品分析报告",
+        f"# {state.target_domain} competitorAnalyze报告",
         "",
         "## 核心结论",
         _executive_summary(state),
         "",
-        "## 分析背景与目标",
-        f"本报告服务于：{state.analysis_goal}。分析对象聚焦 {state.target_domain}，并基于上游搜索结果生成可被下游检测的结构化报告包。",
+        "## Analyze背景与目标",
+        f"本报告服务于：{state.analysis_goal}。Analyze对象聚焦 {state.target_domain}，并基于上游搜索结果Generate可被下游检测的结构化报告包。",
         "",
-        "## 竞品分类与选择理由",
+        "## competitor分类与选择理由",
     ]
 
     if state.competitor_profiles:
         for profile in state.competitor_profiles:
             lines.append(
-                "- {competitor}: {judgement} 证据: {evidence}".format(
-                    competitor=_cell(profile.get("competitor", "未识别竞品")),
+                "- {competitor}: {judgement} evidence: {evidence}".format(
+                    competitor=_cell(profile.get("competitor", "未识别competitor")),
                     judgement=_cell(profile.get("strategic_judgement", "需要补充判断")),
                     evidence=", ".join(profile.get("evidence_ids", []) or ["无"]),
                 )
             )
     else:
-        lines.append("- 当前资料未形成明确竞品画像，需要补充搜索结果。")
+        lines.append("- 当前资料未形成明确competitor画像，需要补充搜索结果。")
 
     lines.extend(
         [
             "",
-            "## 用户场景与任务分析",
+            "## user场景与任务Analyze",
         ]
     )
     if state.pm_insights:
         for insight in state.pm_insights:
             lines.append(
-                f"- {insight.title}: {insight.description} 对 PM 的启发：{insight.pm_value} 证据: {', '.join(insight.evidence_ids)}"
+                f"- {insight.title}: {insight.description} 对 PM 的启发：{insight.pm_value} evidence: {', '.join(insight.evidence_ids)}"
             )
     else:
-        lines.append("- 当前资料不足以形成明确用户场景洞察。")
+        lines.append("- 当前资料不足以形成明确user场景洞察。")
 
     lines.extend(
         [
             "",
-            "## 重点竞品拆解",
+            "## 重点competitor拆解",
         ]
     )
     for profile in state.competitor_profiles:
-        lines.append(f"### {_cell(profile.get('competitor', '未识别竞品'))}")
-        lines.append(f"- 目标用户: {_cell(profile.get('target_user'))}")
+        lines.append(f"### {_cell(profile.get('competitor', '未识别competitor'))}")
+        lines.append(f"- 目标user: {_cell(profile.get('target_user'))}")
         lines.append(f"- 核心场景: {_cell(profile.get('core_scenario'))}")
         lines.append(f"- 产品形态: {_cell(profile.get('product_form'))}")
         lines.append(f"- 商业模式: {_cell(profile.get('business_model'))}")
         lines.append(f"- 战略判断: {_cell(profile.get('strategic_judgement'))}")
     if not state.competitor_profiles:
-        lines.append("- 暂无可拆解竞品画像。")
+        lines.append("- 暂无可拆解competitor画像。")
 
     lines.extend(
         [
@@ -140,10 +142,10 @@ def _fallback_report_markdown(state: ReportState) -> str:
             "## 横向能力对比",
             _markdown_tables(state.comparison_tables),
             "",
-            "## SWOT 分析",
+            "## SWOT Analyze",
             _swot_markdown(state),
             "",
-            "## 产品机会点与风险",
+            "## 产品机会点与risk",
         ]
     )
     opportunities = [item for item in state.swot.opportunities] + [
@@ -152,28 +154,28 @@ def _fallback_report_markdown(state: ReportState) -> str:
     if opportunities:
         for item in opportunities:
             lines.append(
-                f"- {item.point}: {item.pm_implication} 证据: {', '.join(item.evidence_ids)}"
+                f"- {item.point}: {item.pm_implication} evidence: {', '.join(item.evidence_ids)}"
             )
     else:
-        lines.append("- 当前资料不足以形成明确机会点或风险。")
+        lines.append("- 当前资料不足以形成明确机会点或risk。")
 
     lines.extend(
         [
             "",
-            "## 产品策略建议",
+            "## 产品strategysuggestion",
         ]
     )
     for rec in state.recommendations:
         lines.append(
-            f"- [{rec.timeframe}][{rec.priority}] {rec.action}。理由：{rec.reason}。预期影响：{rec.expected_impact}。风险：{rec.risk}。指标：{rec.success_metric}。证据: {', '.join(rec.evidence_ids)}"
+            f"- [{rec.timeframe}][{rec.priority}] {rec.action}。理由：{rec.reason}。预期影响：{rec.expected_impact}。risk：{rec.risk}。指标：{rec.success_metric}。evidence: {', '.join(rec.evidence_ids)}"
         )
     if not state.recommendations:
-        lines.append("- 当前资料不足以生成策略建议。")
+        lines.append("- 当前资料不足以Generatestrategysuggestion。")
 
     lines.extend(
         [
             "",
-            "## 资料来源",
+            "## 资料source",
         ]
     )
     for source in state.sources:
@@ -189,12 +191,12 @@ def _executive_summary(state: ReportState) -> str:
     if state.recommendations:
         parts.append(f"优先动作是：{state.recommendations[0].action}")
     if not parts:
-        return "当前资料有限，建议先补充竞品事实和用户反馈证据。"
+        return "当前资料有限，suggestion先补充competitor事实和user反馈evidence。"
     return "。".join(parts) + "。"
 
 
 def _markdown_tables(tables: List[Dict[str, Any]]) -> str:
-    """把结构化 comparison_tables 渲染成 Markdown 表格。"""
+    """把结构化 comparison_tables 渲染成 Markdown table。"""
 
     sections: List[str] = []
     for table in tables:
@@ -261,9 +263,9 @@ def _markdown_tables(tables: List[Dict[str, Any]]) -> str:
 
 def _table_title(name: Any) -> str:
     mapping = {
-        "competitor_positioning_matrix": "竞品定位矩阵",
+        "competitor_positioning_matrix": "competitor定位矩阵",
         "agent_capability_scorecard": "Agent 能力评分表",
-        "user_journey_comparison": "用户旅程对比表",
+        "user_journey_comparison": "user旅程对比表",
     }
     return mapping.get(str(name), str(name))
 
@@ -271,29 +273,29 @@ def _table_title(name: Any) -> str:
 def _header_map() -> Dict[str, str]:
     return {
         "dimension": "维度",
-        "competitor": "竞品",
-        "target_user": "目标用户",
+        "competitor": "competitor",
+        "target_user": "目标user",
         "core_scenario": "核心场景",
         "product_form": "产品形态",
         "main_entry": "主要入口",
         "business_model": "商业模式",
         "strategic_judgement": "战略判断",
         "stage": "阶段",
-        "user_goal": "用户目标",
-        "competitor_experience": "竞品体验",
+        "user_goal": "user目标",
+        "competitor_experience": "competitor体验",
         "opportunity": "机会点",
-        "evidence_ids": "证据ID",
-        "competitor_name": "竞品",
-        "product": "竞品",
-        "product_name": "竞品",
-        "target_users": "目标用户",
+        "evidence_ids": "evidenceID",
+        "competitor_name": "competitor",
+        "product": "competitor",
+        "product_name": "competitor",
+        "target_users": "目标user",
         "core_positioning": "核心定位",
         "capability": "能力维度",
         "score": "评分",
         "scores": "评分",
         "reason": "依据",
         "journey_stage": "阶段",
-        "source_ids": "证据ID",
+        "source_ids": "evidenceID",
     }
 
 
@@ -333,12 +335,12 @@ def _clean_table_rows(rows: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def _pending_row_for_columns(columns: Iterable[Any], table_name: Any) -> Dict[str, Any]:
     row: Dict[str, Any] = {}
-    subject = clean_text(table_name, 80) or "横向对比表"
+    subject = clean_text(table_name, 80) or "cross-product comparison表"
     for raw_column in columns:
         column = str(raw_column)
-        if column in {"evidence_ids", "证据ID", "证据ids", "source_ids", "pending_search_query"}:
+        if column in {"evidence_ids", "evidenceID", "evidenceids", "source_ids", "pending_search_query"}:
             continue
-        if column in {"竞品", "产品", "产品名称", "competitor"}:
+        if column in {"competitor", "产品", "产品名称", "competitor"}:
             row[column] = "待搜索"
         else:
             row[column] = f"待搜索（方向：{subject} {column}）"
@@ -400,7 +402,7 @@ def _score_table_or_empty(rows: Iterable[Dict[str, Any]]) -> str:
 
 def _score_table(rows: Iterable[Dict[str, Any]]) -> str:
     lines = [
-        "| 维度 | 权重 | 评分 | 依据 | 证据ID |",
+        "| 维度 | 权重 | 评分 | 依据 | evidenceID |",
         "| --- | --- | --- | --- | --- |",
     ]
     for row in rows:
@@ -427,7 +429,7 @@ def _swot_markdown(state: ReportState) -> str:
     for title, items in sections:
         lines.append(f"### {title}")
         if not items:
-            lines.append("- 暂无足够证据。")
+            lines.append("- 暂无足够evidence。")
             continue
         for item in items:
             lines.append(_swot_item_line(item))
@@ -439,7 +441,7 @@ def _swot_item_line(item: SWOTItem) -> str:
         f"- {item.point}: {item.why_it_matters} "
         f"PM 启发：{item.pm_implication} "
         f"置信度：{item.confidence:.2f} "
-        f"证据: {', '.join(item.evidence_ids)}"
+        f"evidence: {', '.join(item.evidence_ids)}"
     )
 
 
@@ -457,7 +459,7 @@ def _structured_payload(state: ReportState) -> Dict[str, Any]:
 
 
 def _cell(value: Any) -> str:
-    """清理表格单元格内容，避免 Markdown 表格被竖线破坏。"""
+    """清理table单元格内容，避免 Markdown table被竖线破坏。"""
 
     if value is None:
         return ""
@@ -558,4 +560,4 @@ def _meaningful_cell(value: Any) -> bool:
     text = str(value or "").strip()
     if not text:
         return False
-    return text not in {"[]", "{}", "null", "None", "未找到明确证据"}
+    return text not in {"[]", "{}", "null", "None", "未找到明确evidence"}

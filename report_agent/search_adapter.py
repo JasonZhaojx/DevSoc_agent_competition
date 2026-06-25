@@ -9,6 +9,8 @@ parameters through report_agent.
 
 from __future__ import annotations
 
+OUTPUT_LANGUAGE = "English"
+
 import os
 import re
 import sys
@@ -252,7 +254,7 @@ def build_report_queries(
         for name in competitor_names:
             candidates = [
                 f"{name} {description} 功能 定价 官方 文档",
-                f"{name} AI 编程助手 评测 用户评价 优势 缺点",
+                f"{name} AI 编程助手 评测 user评价 优势 缺点",
                 f"{name} AI IDE 使用场景 企业版 数据安全 集成",
                 f"{name} pricing features review AI coding assistant",
             ]
@@ -260,8 +262,8 @@ def build_report_queries(
     else:
         queries.extend(
             [
-                f"{description} 竞品 对比",
-                f"{description} 功能 定价 用户评价",
+                f"{description} competitor 对比",
+                f"{description} 功能 定价 user评价",
                 f"{description} 替代品 优势 短板",
             ]
         )

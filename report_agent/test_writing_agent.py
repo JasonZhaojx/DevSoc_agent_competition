@@ -12,6 +12,8 @@ Run optional real LLM mode:
 
 from __future__ import annotations
 
+OUTPUT_LANGUAGE = "English"
+
 import argparse
 import os
 import sys
@@ -22,7 +24,7 @@ from typing import Any, List
 def _load_agent_symbols():
     """加载被测对象。
 
-    正常情况下走包导入；如果父包因搜索/爬虫依赖缺失导致导入失败，则退回到
+    正常情况下走包导入；If父包因搜索/爬虫依赖缺失导致导入失败，则退回到
     writing_agent 目录内的直接导入，让本模块流程测试不被无关模块阻塞。
     """
 
@@ -57,25 +59,25 @@ def mock_search_results() -> List[dict[str, Any]]:
             "url": "https://example.com/agentflow",
             "snippet": "siteName: AgentFlow\ndate: 2026-03-01\nAgentFlow 面向企业团队，强调多步骤任务规划、工具调用和审批日志。",
             "content": (
-                "AgentFlow 面向企业团队，支持把调研、数据整理和报告生成拆成多步骤任务。"
+                "AgentFlow 面向企业团队，支持把调研、数据整理和报告Generate拆成多步骤任务。"
                 "产品提供工具调用、执行状态展示、审批日志和权限控制，帮助团队在自动化执行时保留人工确认。"
             ),
             "source": "mock",
             "content_source": "Playwright网页正文",
         },
         {
-            "title": "ResearchPilot 评测：适合产品经理的竞品调研 Agent",
+            "title": "ResearchPilot 评测：适合产品经理的competitor调研 Agent",
             "url": "https://example.com/researchpilot-review",
             "snippet": "date: 2026-02-10\n评测提到 ResearchPilot 模板丰富，但高级配置需要理解 API 和数据源权限。",
             "content": (
-                "ResearchPilot 提供竞品调研模板、资料归纳和引用导出。"
-                "评测认为它适合产品经理快速生成初稿，但在连接企业内部数据源时配置较复杂，普通用户需要学习成本。"
+                "ResearchPilot 提供competitor调研模板、资料归纳和引用导出。"
+                "评测认为它适合产品经理快速Generate初稿，但在连接企业内部数据源时配置较复杂，普通user需要学习成本。"
             ),
             "source": "mock",
             "content_source": "网页正文",
         },
         {
-            "title": "AutoPM Agent 定价与集成说明",
+            "title": "AutoPM Agent 定价与集成note",
             "url": "https://example.com/autopm-pricing",
             "snippet": "date: 2025-12-20\nAutoPM Agent 提供团队订阅和企业套餐，支持 API、Slack 与知识库集成。",
             "content": (
@@ -89,7 +91,7 @@ def mock_search_results() -> List[dict[str, Any]]:
 
 
 def config_for_mode(mode: str):
-    """根据测试模式生成配置。
+    """根据测试模式Generate配置。
 
     offline 明确设置 `use_llm=False`；real 才读取主脚本里的 LLM 配置。
     """
@@ -139,13 +141,13 @@ def assert_report_package(package: ReportPackage) -> None:
 
     for section in [
         "核心结论",
-        "竞品分类",
-        "用户场景",
-        "重点竞品拆解",
+        "competitor分类",
+        "user场景",
+        "重点competitor拆解",
         "横向能力对比",
         "SWOT",
-        "产品策略建议",
-        "资料来源",
+        "产品strategysuggestion",
+        "资料source",
     ]:
         assert section in package.report_markdown, f"report missing section: {section}"
 
@@ -168,8 +170,8 @@ def main() -> None:
         mock_search_results(),
         config=config,
         task_id=f"test_{args.mode}",
-        analysis_goal="验证 writing agent 是否能生成可检测的竞品分析报告包",
-        target_domain="AI Agent 竞品调研工具",
+        analysis_goal="验证 writing agent 是否能Generate可检测的competitorAnalyze报告包",
+        target_domain="AI Agent competitor调研工具",
         competitors=["AgentFlow", "ResearchPilot", "AutoPM Agent"],
     )
     assert_report_package(package)

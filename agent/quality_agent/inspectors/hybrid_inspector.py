@@ -79,7 +79,7 @@ class HybridInspector:
         """仅使用LLM检测"""
         issues: List[QualityIssue] = []
         
-        # 收集所有LLM检查结果
+        # 收集AllLLM检查结果
         issues.extend(self.llm_inspector.check_semantic_consistency(analysis))
         issues.extend(self.llm_inspector.check_factual_accuracy(analysis))
         issues.extend(self.llm_inspector.check_analysis_depth(analysis))
@@ -91,7 +91,7 @@ class HybridInspector:
         """仅使用规则检测（兜底模式）"""
         issues: List[QualityIssue] = []
         
-        # 执行所有规则检查
+        # 执行All规则检查
         issues.extend(check_claim_evidence_linkage(analysis))
         issues.extend(check_evidence_quality(analysis))
         issues.extend(check_report_structure(analysis))
@@ -117,7 +117,7 @@ class HybridInspector:
         llm_issues = self._llm_only_inspect(analysis)
         llm_issues = self._merge_issues(llm_issues, semantic_issues)
 
-        # 执行投票融合，同时保留LLM未明确否决的规则问题。
+        # 执行投票融合，同时保留LLM未明确否决的规则issue。
         final_issues = self._vote_on_issues(llm_issues, rule_issues)
         final_issues = self._merge_issues(final_issues, rule_issues)
         final_issues = self._merge_issues(final_issues, semantic_issues)
@@ -193,11 +193,11 @@ class HybridInspector:
             # 优先使用LLM检测
             llm_issues = self._llm_only_inspect(analysis)
             
-            # 如果LLM返回了结果，返回LLM结果
+            # IfLLM返回了结果，返回LLM结果
             if llm_issues:
                 return llm_issues
             
-            # 如果LLM没有发现问题，也运行规则检查作为补充
+            # IfLLM没有发现issue，也运行规则检查作为补充
             rule_issues = self._rule_only_inspect(analysis)
             
             # 合并结果（去重）
@@ -211,7 +211,7 @@ class HybridInspector:
     
     def _vote_on_issues(self, llm_issues: List[QualityIssue], rule_issues: List[QualityIssue]) -> List[QualityIssue]:
         """投票机制：合并LLM和规则检查结果（支持权重配置）"""
-        # 创建问题描述到问题对象的映射
+        # 创建issue描述到issue对象的映射
         llm_issue_map = {issue.description: issue for issue in llm_issues}
         rule_issue_map = {issue.description: issue for issue in rule_issues}
         
@@ -231,7 +231,7 @@ class HybridInspector:
             
             # 判断是否通过
             if weighted_score >= self.voting_threshold:
-                # 选择更严重的问题
+                # 选择更严重的issue
                 if llm_vote and rule_vote:
                     llm_issue = llm_issue_map[description]
                     rule_issue = rule_issue_map[description]
@@ -254,7 +254,7 @@ class HybridInspector:
         return final_issues
     
     def _merge_issues(self, llm_issues: List[QualityIssue], rule_issues: List[QualityIssue]) -> List[QualityIssue]:
-        """合并两个问题列表（去重）"""
+        """合并两个issue列表（去重）"""
         seen_descriptions = set()
         merged = []
         

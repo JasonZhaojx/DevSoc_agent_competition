@@ -55,9 +55,9 @@ def check_logical_consistency(analysis: ReportAnalysis) -> List[QualityIssue]:
             issues.append(QualityIssue(
                 type=IssueType.LOGICAL_INCONSISTENCY,
                 severity=IssueSeverity.MINOR,
-                description="策略建议与SWOT分析关联性较弱",
-                suggestion="确保策略建议基于SWOT分析结果制定",
-                explanation="策略建议应该是SWOT分析的自然延伸",
+                description="strategysuggestion与SWOTAnalyze关联性较弱",
+                suggestion="确保strategysuggestion基于SWOTAnalyze结果制定",
+                explanation="strategysuggestion应该是SWOTAnalyze的自然延伸",
                 impact="缺少关联会降低报告的逻辑性和说服力",
             ))
 
@@ -69,10 +69,10 @@ def check_logical_consistency(analysis: ReportAnalysis) -> List[QualityIssue]:
         issues.append(QualityIssue(
             type=IssueType.LOGICAL_INCONSISTENCY,
             severity=IssueSeverity.MINOR,
-            description="存在重复或相似的策略建议",
-            suggestion="合并重复的建议，保持建议的简洁性",
-            explanation="重复建议会降低报告的专业性",
-            impact="冗余建议可能让读者困惑",
+            description="存在重复或相似的strategysuggestion",
+            suggestion="合并重复的suggestion，保持suggestion的简洁性",
+            explanation="重复suggestion会降低报告的专业性",
+            impact="冗余suggestion可能让读者困惑",
         ))
 
     return issues

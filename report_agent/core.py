@@ -1,11 +1,13 @@
 """写作 Agent 的主工作流入口。
 
-本文件只负责 orchestration：按“证据 -> 洞察 -> 对比 -> SWOT -> 策略 ->
-报告 -> 自检”的顺序串联各节点。具体生成逻辑放在独立 agent 文件中，避免
+本文件只负责 orchestration：按“evidence -> 洞察 -> 对比 -> SWOT -> strategy ->
+报告 -> 自检”的顺序串联各节点。具体Generate逻辑放在独立 agent 文件中，避免
 core 变成一个难维护的大函数。
 """
 
 from __future__ import annotations
+
+OUTPUT_LANGUAGE = "English"
 
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
@@ -38,7 +40,7 @@ def run_writing_agent(
     config: Optional[WritingAgentConfig] = None,
     *,
     task_id: str = "task_001",
-    analysis_goal: str = "生成面向产品经理的竞品分析报告",
+    analysis_goal: str = "Generate面向产品经理的competitorAnalyze报告",
     target_domain: str = "AI Agent",
     competitors: Optional[Sequence[str]] = None,
 ) -> ReportPackage:
@@ -49,17 +51,17 @@ def run_writing_agent(
         config: 写作 Agent 配置；`use_llm=False` 时全流程走本地 fallback。
         task_id: 外部任务标识，会原样写入 ReportPackage。
         analysis_goal: 本次报告服务的产品决策目标。
-        target_domain: 竞品分析领域。
-        competitors: 可选竞品名，用于更稳定地归属 evidence 和画像。
+        target_domain: competitorAnalyze领域。
+        competitors: 可选competitor名，用于更稳定地归属 evidence 和画像。
 
     Returns:
-        ReportPackage: Markdown 报告、结构化分析、证据映射和生成轨迹。
+        ReportPackage: Markdown 报告、结构化Analyze、evidence映射和Generate轨迹。
     """
 
     runtime_config = config or WritingAgentConfig()
     competitor_list = list(competitors or [])
 
-    # 第一步先把外部输入标准化并拆成 evidence cards。后续所有结论都从
+    # 第一步先把外部输入标准化并拆成 evidence cards。后续All结论都从
     # evidence_id 出发，保证可以被下游检测模块追溯。
     _log(runtime_config, "[writing-agent] structure evidence")
     sources, evidence_cards = structure_evidence(
@@ -84,7 +86,7 @@ def run_writing_agent(
         [card.evidence_id for card in evidence_cards],
     )
 
-    # 洞察层只把证据转成 PM 语言，不直接写长报告。
+    # 洞察层只把evidence转成 PM 语言，不直接写长报告。
     _log(runtime_config, "[writing-agent] extract PM insights")
     state.pm_insights = extract_pm_insights(
         state.evidence_cards,
@@ -175,7 +177,7 @@ def run_writing_agent(
             [table.get("table_name", "table") for table in state.comparison_tables],
         )
 
-    # claim_evidence_map 是给下游质检 Agent 的关键协议字段。
+    # claim_evidence_map 是给下游QA Agent 的关键协议字段。
     state.claim_evidence_map = _build_claim_evidence_map(state)
 
     _log(runtime_config, "[writing-agent] compose report")
@@ -192,7 +194,7 @@ def run_writing_agent(
 
 
 def _build_claim_evidence_map(state: ReportState) -> List[Dict[str, Any]]:
-    """把每个 evidence claim 映射回 evidence/source。
+    """把Each evidence claim 映射回 evidence/source。
 
     这里不把 PM insight 和 SWOT 额外展开为 claim，是为了保证最小可验证单元
     足够清晰；下游可以通过 evidence_ids 继续关联到更高层判断。
@@ -236,7 +238,7 @@ def _table_gap_result_or_base(
 
 
 def _structured_analysis_from_state(state: ReportState) -> Dict[str, Any]:
-    """生成对外稳定的 structured_analysis。
+    """Generate对外稳定的 structured_analysis。
 
     同时保留 `recommendations` 和 `product_recommendations` 两个 key，兼容
     文档示例和更直观的调用命名。
@@ -323,7 +325,7 @@ def _can_use_table_gap_llm(config: WritingAgentConfig) -> bool:
 def _trace(
     state: ReportState, step: str, input_refs: List[str], output_refs: List[str]
 ) -> None:
-    """记录每个节点消费了哪些引用、产出了哪些引用。"""
+    """记录Each节点消费了哪些引用、产出了哪些引用。"""
 
     state.generation_trace.append(
         {

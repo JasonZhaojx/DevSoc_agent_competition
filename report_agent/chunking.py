@@ -7,6 +7,8 @@ objects into bounded prompt batches without mutating the original records.
 
 from __future__ import annotations
 
+OUTPUT_LANGUAGE = "English"
+
 import json
 import os
 from typing import Any, Iterable, List, Sequence, TypeVar

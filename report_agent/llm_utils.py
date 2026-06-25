@@ -1,10 +1,12 @@
 """写作 Agent 的 LLM 工具函数。
 
-所有云端模型调用都集中在这里。业务节点只调用 `call_json_llm`，拿不到合法
+All云端模型调用都集中在这里。业务节点只调用 `call_json_llm`，拿不到合法
 JSON 时自动得到 None 并进入本地 fallback，因此 offline 测试不会触发网络。
 """
 
 from __future__ import annotations
+
+OUTPUT_LANGUAGE = "English"
 
 import importlib.util
 import json
@@ -64,7 +66,7 @@ def parse_json_payload(content: str) -> Optional[Any]:
 def _load_chat_content():
     """加载共享 LLM client。
 
-    优先走正常包导入；如果包导入因路径问题失败，则直接按文件路径加载
+    优先走正常包导入；If包导入因路径issue失败，则直接按文件路径加载
     `extracted_core/llm_client.py`，保证 report_agent 的独立测试可运行。
     """
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+OUTPUT_LANGUAGE = "English"
+
 import time
 from threading import Lock
 from concurrent.futures import ThreadPoolExecutor, as_completed

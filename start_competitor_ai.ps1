@@ -19,7 +19,7 @@ function Show-Logo {
 }
 
 function Wait-Return {
-  param([string]$Prompt = "按回车键返回菜单")
+  param([string]$Prompt = "Press Enter to return to the menu")
   [void](Read-Host $Prompt)
 }
 
@@ -39,9 +39,9 @@ function Write-LocalPythonConfig {
 
   [System.IO.File]::WriteAllLines($configPath, $lines, $localEncoding)
   [System.IO.File]::WriteAllText($pythonPathFile, $pythonFullPath, $localEncoding)
-  Write-Host "已写入本地环境配置：" -ForegroundColor Green
+  Write-Host "Local environment config written:" -ForegroundColor Green
   Write-Host "  $configPath"
-  Write-Host "已保存 Python 路径：" -ForegroundColor Green
+  Write-Host "Saved Python path:" -ForegroundColor Green
   Write-Host "  $pythonFullPath"
 }
 
@@ -100,15 +100,15 @@ function Read-ConfiguredPython {
 function Invoke-InstallEnv {
   Show-Logo
   Write-Host ""
-  Write-Host "正在启动安装向导..."
+  Write-Host "Starting the installer..."
   Write-Host ""
   & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $ProjectRoot "install_project_env.ps1")
   $code = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
   Write-Host ""
   if ($code -eq 0) {
-    Write-Host "安装完成，本地环境配置已写入 .local_env.bat。" -ForegroundColor Green
+    Write-Host "Installation complete. Local environment config was written to .local_env.bat." -ForegroundColor Green
   } else {
-    Write-Host "安装脚本返回错误，请查看上方日志。" -ForegroundColor Red
+    Write-Host "The installer returned an error. Check the log above." -ForegroundColor Red
   }
   Wait-Return
 }
@@ -116,18 +116,18 @@ function Invoke-InstallEnv {
 function Set-ExistingPython {
   Show-Logo
   Write-Host ""
-  Write-Host "请输入已经安装好依赖环境的 Python 解释器。"
-  Write-Host "可以填写 python.exe 完整路径，也可以填写系统命令名：python / python3 / py"
-  Write-Host "不要填写额外参数。"
+  Write-Host "Enter a Python interpreter that already has the required dependencies installed."
+  Write-Host "You can enter the full path to python.exe or a command name: python / python3 / py"
+  Write-Host "Do not include extra arguments."
   Write-Host ""
 
-  $inputText = Read-Host "Python 路径或命令"
+  $inputText = Read-Host "Python path or command"
   $resolved = Resolve-PythonExecutable -InputText $inputText
   if ($null -eq $resolved) {
     Write-Host ""
-    Write-Host "无法运行这个 Python 解释器：" -ForegroundColor Red
+    Write-Host "Cannot run this Python interpreter:" -ForegroundColor Red
     Write-Host "  $inputText"
-    Write-Host "请确认路径正确，或者输入 python / python3 / py。"
+    Write-Host "Check the path, or enter python / python3 / py."
     Wait-Return
     return
   }
@@ -141,52 +141,52 @@ function Start-WebServer {
   $python = Read-ConfiguredPython
   if ([string]::IsNullOrWhiteSpace($python)) {
     Write-Host ""
-    Write-Host "未找到本地环境配置 .local_env.bat，也没有发现 .venv。" -ForegroundColor Yellow
-    Write-Host "请先选择 [1] 安装/更新 Python 环境，或选择 [3] 指定已有 Python。"
+    Write-Host "No local environment config .local_env.bat was found, and .venv was not found either." -ForegroundColor Yellow
+    Write-Host "Choose [1] Install/update Python environment first, or choose [3] Specify an existing Python."
     Wait-Return
     return
   }
 
   if (-not (Test-Path -LiteralPath $python)) {
     Write-Host ""
-    Write-Host "保存的 Python 路径不存在：" -ForegroundColor Red
+    Write-Host "The saved Python path does not exist:" -ForegroundColor Red
     Write-Host "  $python"
-    Write-Host "请重新选择 [1] 安装/更新 Python 环境，或选择 [3] 指定已有 Python。"
+    Write-Host "Choose [1] Install/update Python environment again, or choose [3] Specify an existing Python."
     Wait-Return
     return
   }
 
   $port = "8000"
   Write-Host ""
-  $portInput = Read-Host "请输入服务端口，直接回车使用 8000"
+  $portInput = Read-Host "Enter the server port, or press Enter to use 8000"
   if (-not [string]::IsNullOrWhiteSpace($portInput)) {
     $port = $portInput.Trim()
   }
 
   Show-Logo
   Write-Host ""
-  Write-Host "使用 Python："
+  Write-Host "Using Python:"
   Write-Host "  $python"
   Write-Host ""
-  Write-Host "正在启动 Web 服务器："
+  Write-Host "Starting the web server:"
   Write-Host "  http://127.0.0.1:$port"
   Write-Host ""
   & $python (Join-Path $ProjectRoot "backend\server.py") $port
   Write-Host ""
-  Write-Host "服务器已退出。"
+  Write-Host "The server has exited."
   Wait-Return
 }
 
 while ($true) {
   Show-Logo
   Write-Host ""
-  Write-Host "[1] 安装/更新 Python 环境"
-  Write-Host "[2] 使用本地 Python 启动 Web 服务器"
-  Write-Host "[3] 使用我已经装好环境的 Python"
-  Write-Host "[4] 退出"
+  Write-Host "[1] Install/update Python environment"
+  Write-Host "[2] Start web server with local Python"
+  Write-Host "[3] Use an existing Python environment"
+  Write-Host "[4] Exit"
   Write-Host ""
 
-  $choice = Read-Host "请选择操作"
+  $choice = Read-Host "Choose an action"
   switch ($choice.Trim()) {
     "1" { Invoke-InstallEnv }
     "2" { Start-WebServer }
@@ -194,7 +194,7 @@ while ($true) {
     "4" { exit 0 }
     default {
       Write-Host ""
-      Write-Host "输入无效，请重新选择。" -ForegroundColor Yellow
+      Write-Host "Invalid input. Please choose again." -ForegroundColor Yellow
       Wait-Return
     }
   }
