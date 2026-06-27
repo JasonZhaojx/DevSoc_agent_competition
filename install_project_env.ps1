@@ -435,13 +435,19 @@ for package, module in mods:
     except Exception as exc:
         missing.append(f"{package} ({exc.__class__.__name__}: {exc})")
 if missing:
-    print("以下依赖缺失或导入异常:")
+    print("Missing or failed imports:")
     for item in missing:
         print(" - " + item)
     raise SystemExit(1)
-print("核心依赖导入检查通过。")
+print("Core dependency import check passed.")
 "@
-  Invoke-Step -Title "验证核心依赖导入" -File $PythonPath -Arguments @("-c", $code) -Required $false
+  $verifyScript = Join-Path $env:TEMP ("rivalmind_verify_imports_{0}.py" -f ([guid]::NewGuid().ToString("N")))
+  try {
+    [System.IO.File]::WriteAllText($verifyScript, $code, [System.Text.UTF8Encoding]::new($false))
+    Invoke-Step -Title "Verify core dependency imports" -File $PythonPath -Arguments @($verifyScript) -Required $false
+  } finally {
+    Remove-Item -LiteralPath $verifyScript -Force -ErrorAction SilentlyContinue
+  }
 }
 
 function Write-LocalEnvConfig {

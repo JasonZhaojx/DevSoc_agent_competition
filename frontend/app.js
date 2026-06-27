@@ -38,6 +38,11 @@ function looksLikeSecret(value) {
 }
 
 const productDescription = $("#productDescription");
+const authOverlay = $("#authOverlay");
+const authForm = $("#authForm");
+const authPassword = $("#authPassword");
+const authSubmitBtn = $("#authSubmitBtn");
+const authStatus = $("#authStatus");
 const llmProvider = $("#llmProvider");
 const topN = $("#topN");
 const queryCount = $("#queryCount");
@@ -238,11 +243,61 @@ for (const button of navButtons) {
 
 document.addEventListener("DOMContentLoaded", () => {
   loadSettings();
-  refresh();
   updateQualityPreview();
   showWizardStep(1);
   initKeyboardShortcuts();
+  initAuth();
 });
+
+authForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await submitAuth();
+});
+
+async function initAuth() {
+  try {
+    const data = await api("/api/auth/status");
+    if (data.authenticated) {
+      setAuthenticated(true);
+      await refresh();
+      return;
+    }
+  } catch {
+    // Keep the login overlay visible if auth status cannot be checked.
+  }
+  setAuthenticated(false);
+}
+
+function setAuthenticated(authenticated) {
+  document.body.classList.toggle("auth-pending", !authenticated);
+  if (authOverlay) authOverlay.hidden = authenticated;
+  if (!authenticated) authPassword?.focus();
+}
+
+async function submitAuth() {
+  const password = authPassword?.value || "";
+  if (!password.trim()) {
+    if (authStatus) authStatus.textContent = "Enter the access password.";
+    authPassword?.focus();
+    return;
+  }
+  if (authSubmitBtn) authSubmitBtn.disabled = true;
+  if (authStatus) authStatus.textContent = "Checking password...";
+  try {
+    await api("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    });
+    if (authStatus) authStatus.textContent = "";
+    setAuthenticated(true);
+    await refresh();
+  } catch (error) {
+    if (authStatus) authStatus.textContent = error.message || "Login failed.";
+    authPassword?.select();
+  } finally {
+    if (authSubmitBtn) authSubmitBtn.disabled = false;
+  }
+}
 
 function initKeyboardShortcuts() {
   document.addEventListener("keydown", (event) => {
