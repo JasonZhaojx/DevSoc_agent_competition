@@ -27,6 +27,7 @@ from extracted_core.positioning_product_workflow import (  # noqa: E402
     run_positioning_product_search,
 )
 from extracted_core.search import SearchConfig, SearchResult, SearchSource  # noqa: E402
+from report_agent.llm_utils import english_system_prompt, safe_ascii_filename  # noqa: E402
 
 
 # 0 = 豆包/火山 Ark, 1 = SiliconFlow, 2 = 小米 MiMo
@@ -82,13 +83,13 @@ def read_product_description() -> str:
     description = " ".join(sys.argv[1:]).strip()
     if description:
         return description
-    return input("请输入Product / competitor direction: ").strip()
+    return input("Enter product / competitor direction: ").strip()
 
 
 def read_optional_text_file() -> tuple[str, str]:
     path_text = os.getenv("OWN_PRODUCT_PARAM_TXT", "").strip()
     if not path_text:
-        path_text = input("请输入自己产品parameters txt 路径（可直接回车跳过）: ").strip().strip('"')
+        path_text = input("Enter own-product parameters txt path (press Enter to skip): ").strip().strip('"')
     if not path_text:
         return "", ""
 
@@ -96,13 +97,13 @@ def read_optional_text_file() -> tuple[str, str]:
     if not path.is_absolute():
         path = ROOT / path
     if not path.exists():
-        print(f"[warn] txt 不存在，已跳过: {path}")
+        print(f"[warn] txt file does not exist, skipped: {path}")
         return "", ""
 
     text = path.read_text(encoding="utf-8", errors="replace").strip()
     if len(text) > OWN_PRODUCT_PARAM_MAX_CHARS:
         text = text[:OWN_PRODUCT_PARAM_MAX_CHARS]
-        print(f"[warn] txt 较长，已截取前 {OWN_PRODUCT_PARAM_MAX_CHARS} 字符。")
+        print(f"[warn] txt is long; truncated to the first {OWN_PRODUCT_PARAM_MAX_CHARS} characters.")
     return str(path), text
 
 
@@ -141,11 +142,11 @@ def format_search_evidence(results: list[SearchResult], max_chars: int) -> str:
         text = item.content or item.snippet
         section = "\n".join(
             [
-                f"[搜索结果{index}]",
-                f"标题: {item.title}",
-                f"链接: {item.url}",
-                f"正文source: {item.content_source or '未知'}",
-                f"正文: {text}",
+                f"[Search Result {index}]",
+                f"Title: {item.title}",
+                f"URL: {item.url}",
+                f"Content source: {item.content_source or 'unknown'}",
+                f"Content: {text}",
             ]
         )
         if max_chars and used_chars + len(section) > max_chars:
@@ -191,7 +192,7 @@ def normalize_questionnaire_items(items: list[dict[str, Any]]) -> list[dict[str,
     for index, item in enumerate(items, 1):
         value = dict(item)
         value["id"] = str(value.get("id") or f"Q{index:03d}")
-        value["dimension"] = str(value.get("dimension") or "未分类")
+        value["dimension"] = str(value.get("dimension") or "Uncategorized")
         value["question_type"] = str(value.get("question_type") or "text")
         value["question"] = str(value.get("question") or "").strip()
         options = value.get("options")
@@ -263,57 +264,57 @@ def generate_questionnaire(
     search_results: list[SearchResult],
 ) -> list[dict[str, Any]]:
     api_key, base_url, model = active_llm_config()
-    competitor_text = "、".join(competitor_names[:COMPETITOR_LIMIT]) or "未抽取到明确competitor名"
+    competitor_text = ", ".join(competitor_names[:COMPETITOR_LIMIT]) or "No explicit competitor names extracted"
     evidence_text = format_search_evidence(search_results, MAX_SEARCH_EVIDENCE_CHARS)
-    own_params = own_param_text.strip() or "无"
+    own_params = own_param_text.strip() or "None"
 
     prompt = f"""
-你是user研究和产品strategy专家。请根据“competitor搜索结果”和“自己产品parameters”Generate一份调查questionnaire。
+You are a user research and product strategy expert. Generate a survey questionnaire in English based on competitor search results and own-product parameters.
 
 Product / competitor direction:
 {product_description}
 
-抽取到的相关产品:
+Extracted related products:
 {competitor_text}
 
-自己产品parameters:
+Own-product parameters:
 {own_params}
 
-competitor搜索结果:
+Competitor search results:
 {evidence_text}
 
-任务:
-Generate {QUESTION_COUNT} 个调查Questionnaire items，用于验证目标user对这些相关产品/competitor的认知、使用、购买、替换意愿和关键决策因素。
+Task:
+Generate {QUESTION_COUNT} questionnaire items to validate target users' awareness, usage, purchase intent, switching intent, and key decision factors for these products or competitors.
 
-设计要求:
-- issueMust围绕搜索结果中体现的competitor特点，以及自己产品parameters中需要验证的对比点。
-- If自己产品parameters里有定价/套餐/免费额度，Must设计价格敏感度、付费意愿或套餐偏好相关issue。
-- 覆盖维度应尽量包括：user画像、当前使用工具、核心场景、功能重要性、competitor认知、competitor使用体验、痛点、替换门槛、价格/套餐、部署/安全/隐私、购买决策、NPS/推荐意愿。
-- Each题目要能落地给真实user填写，Do not写成研究员内部Analyzeissue。
-- Do not编造具体competitor事实；可基于搜索结果总结出的方向来设计issue。
-- 输出严格 JSON 数组，Do not Markdown，Do not解释。
+Design requirements:
+- Questions must focus on competitor characteristics found in search results and own-product parameter comparison points that need validation.
+- If own-product parameters include pricing, plans, or free quotas, include questions about price sensitivity, willingness to pay, or package preference.
+- Cover dimensions such as user profile, current tools, core scenarios, feature importance, competitor awareness, competitor usage experience, pain points, switching barriers, pricing/packages, deployment/security/privacy, purchase decisions, and NPS/referral intent.
+- Every question must be practical for real users to answer. Do not write internal research-analysis questions.
+- Do not invent specific competitor facts; you may design questions around directions summarized from search results.
+- Output a strict JSON array only. Do not output Markdown or explanations.
 
-Each题目对象Must包含这些字段:
-- id: 例如 Q001
-- dimension: 调研维度
+Each item must include these fields:
+- id: for example Q001
+- dimension: research dimension
 - question_type: single_choice / multiple_choice / scale_1_5 / ranking / text
-- question: issue正文
-- options: 选项数组；开放题填 []
-- target_insight: 这个issue想验证什么
-- related_competitor_points: 这个题目对应的competitor特点或自己产品parameters点数组
-- source_basis: 这个题目设计依据，简短note来自哪些搜索发现或parameters点
+- question: question text
+- options: array of options; use [] for open-text questions
+- target_insight: what this question validates
+- related_competitor_points: array of related competitor characteristics or own-product parameter points
+- source_basis: short note explaining which search findings or parameter points support this question
 
-示例:
+Example:
 [
   {{
     "id": "Q001",
-    "dimension": "当前工具使用",
+    "dimension": "Current Tool Usage",
     "question_type": "multiple_choice",
-    "question": "你目前主要使用哪些同类产品或工具？",
-    "options": ["产品A", "产品B", "产品C", "暂未使用", "其他，请注明"],
-    "target_insight": "了解目标user当前competitor使用情况",
-    "related_competitor_points": ["competitor使用现状"],
-    "source_basis": "来自抽取到的相关产品列表"
+    "question": "Which comparable products or tools do you currently use most often?",
+    "options": ["Product A", "Product B", "Product C", "Not currently using any", "Other, please specify"],
+    "target_insight": "Understand current competitor usage among target users",
+    "related_competitor_points": ["Competitor usage status"],
+    "source_basis": "Derived from the extracted related product list"
   }}
 ]
 """.strip()
@@ -323,7 +324,7 @@ Each题目对象Must包含这些字段:
         base_url=base_url,
         model=model,
         messages=[
-            {"role": "system", "content": "你只输出严格 JSON 数组，用于后续保存为 JSONL。"},
+            {"role": "system", "content": english_system_prompt("Output strict JSON arrays only for JSONL persistence.")},
             {"role": "user", "content": prompt},
         ],
         temperature=0.25,
@@ -342,53 +343,53 @@ def simulate_response_batch(
     batch_size: int,
 ) -> list[dict[str, Any]]:
     api_key, base_url, model = active_llm_config()
-    competitor_text = "、".join(competitor_names[:COMPETITOR_LIMIT]) or "未抽取到明确competitor名"
-    own_params = own_param_text.strip() or "无"
+    competitor_text = ", ".join(competitor_names[:COMPETITOR_LIMIT]) or "No explicit competitor names extracted"
+    own_params = own_param_text.strip() or "None"
     questionnaire_json = compact_questionnaire(questionnaire_items)
     batch_end = batch_start + batch_size - 1
 
     prompt = f"""
-你是user研究模拟器。请基于下面的questionnaire，模拟 {batch_size} 位不同受访者完整填写。
+You are a user research simulator. Based on the questionnaire below, simulate complete English responses from {batch_size} distinct respondents.
 
 Product / competitor direction:
 {product_description}
 
-相关产品/competitor:
+Related products/competitors:
 {competitor_text}
 
-自己产品parameters:
+Own-product parameters:
 {own_params}
 
 questionnaire JSON:
 {questionnaire_json}
 
-受访者编号范围:
-R{batch_start:03d} 到 R{batch_end:03d}
+Respondent ID range:
+R{batch_start:03d} to R{batch_end:03d}
 
-模拟要求:
-- Each受访者Must有不同画像，覆盖不同经验、预算、行业、岗位、使用频率、当前工具和购买决策角色。
-- Each受访者Must回答questionnaire中的每一个题目。
-- single_choice 只能选择一个选项；multiple_choice 可以选择多个选项；scale_1_5 Must给 1-5 的整数；ranking 给排序数组；text 给自然语言短答。
-- 回答要自洽：画像、当前工具、预算、痛点和付费意愿要互相匹配。
-- 这是模拟数据，不能写“无法判断”“作为 AI”等措辞。
-- 输出严格 JSON 数组，Do not Markdown，Do not解释。
+Simulation requirements:
+- Each respondent must have a distinct profile covering different experience levels, budgets, industries, roles, usage frequencies, current tools, and purchase decision roles.
+- Each respondent must answer every questionnaire item.
+- single_choice must select one option; multiple_choice may select multiple options; scale_1_5 must use an integer from 1 to 5; ranking must use an ordered array; text must use a concise natural-language answer.
+- Answers must be internally consistent: profile, current tools, budget, pain points, and willingness to pay should match.
+- This is simulated data. Do not write phrases such as "cannot determine" or "as an AI".
+- Output a strict JSON array only. Do not output Markdown or explanations.
 
-Each受访者对象格式:
+Each respondent object format:
 {{
   "respondent_id": "R001",
   "profile": {{
-    "role": "岗位/身份",
-    "industry": "行业",
-    "company_size": "公司规模",
-    "experience_level": "经验水平",
-    "budget_sensitivity": "预算敏感度",
-    "current_tools": ["当前使用工具"]
+    "role": "Role or identity",
+    "industry": "Industry",
+    "company_size": "Company size",
+    "experience_level": "Experience level",
+    "budget_sensitivity": "Budget sensitivity",
+    "current_tools": ["Current tools"]
   }},
   "answers": [
     {{
       "question_id": "Q001",
-      "answer": "作答内容；多选/排序用数组，评分用数字",
-      "reason": "简短note为什么这样回答"
+      "answer": "Answer content; use arrays for multiple choice/ranking and numbers for ratings",
+      "reason": "Brief note explaining the answer"
     }}
   ]
 }}
@@ -399,7 +400,7 @@ Each受访者对象格式:
         base_url=base_url,
         model=model,
         messages=[
-            {"role": "system", "content": "你只输出严格 JSON 数组，模拟真实user填写questionnaire。"},
+            {"role": "system", "content": english_system_prompt("Output strict JSON arrays only. Simulate realistic user questionnaire responses in English.")},
             {"role": "user", "content": prompt},
         ],
         temperature=0.75,
@@ -430,7 +431,7 @@ def simulate_responses(
             batch_size=batch_size,
         )
         if not batch:
-            raise RuntimeError("模型没有Generate有效模拟回答。")
+            raise RuntimeError("The model did not generate valid simulated responses.")
         responses.extend(batch)
     return responses[:total_count]
 
@@ -438,8 +439,7 @@ def simulate_responses(
 def write_jsonl(items: list[dict[str, Any]], product_description: str) -> Path:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_name = re.sub(r'[<>:"/\\|?*\r\n\t]+', "_", product_description).strip(" ._")
-    safe_name = re.sub(r"\s+", "_", safe_name)[:50] or "questionnaire"
+    safe_name = safe_ascii_filename(product_description, fallback="questionnaire", max_chars=50)
     path = OUTPUT_DIR / f"{timestamp}_{safe_name}.jsonl"
     with path.open("w", encoding="utf-8", newline="\n") as file:
         for item in items:
@@ -450,8 +450,7 @@ def write_jsonl(items: list[dict[str, Any]], product_description: str) -> Path:
 def output_base_path(product_description: str, suffix: str) -> Path:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_name = re.sub(r'[<>:"/\\|?*\r\n\t]+', "_", product_description).strip(" ._")
-    safe_name = re.sub(r"\s+", "_", safe_name)[:50] or "questionnaire"
+    safe_name = safe_ascii_filename(product_description, fallback="questionnaire", max_chars=50)
     return OUTPUT_DIR / f"{timestamp}_{safe_name}_{suffix}"
 
 
@@ -492,7 +491,7 @@ def write_response_csv(
                 "company_size": profile.get("company_size", ""),
                 "experience_level": profile.get("experience_level", ""),
                 "budget_sensitivity": profile.get("budget_sensitivity", ""),
-                "current_tools": "、".join(profile.get("current_tools", []))
+                "current_tools": ", ".join(profile.get("current_tools", []))
                 if isinstance(profile.get("current_tools"), list)
                 else str(profile.get("current_tools", "")),
             }
@@ -503,7 +502,7 @@ def write_response_csv(
                     continue
                 value = answer.get("answer", "")
                 if isinstance(value, list):
-                    value = "、".join(str(item) for item in value)
+                    value = ", ".join(str(item) for item in value)
                 answer_map[str(answer.get("question_id") or "")] = value
             for question_id in question_ids:
                 row[question_id] = answer_map.get(question_id, "")
@@ -526,7 +525,7 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
 
 def answer_to_text(value: Any) -> str:
     if isinstance(value, list):
-        return "、".join(str(item) for item in value)
+        return ", ".join(str(item) for item in value)
     return str(value)
 
 
@@ -750,7 +749,7 @@ def build_code_analysis(
 def truncate_for_llm(text: str, max_chars: int = QUESTIONNAIRE_ANALYSIS_TEXT_MAX_CHARS) -> str:
     if len(text) <= max_chars:
         return text
-    return text[:max_chars].rstrip() + f"...[已截断{len(text) - max_chars}字]"
+    return text[:max_chars].rstrip() + f"...[truncated {len(text) - max_chars} chars]"
 
 
 def compact_value_for_llm(value: Any) -> Any:
@@ -767,7 +766,7 @@ def json_for_llm(value: Any, max_chars: int = QUESTIONNAIRE_ANALYSIS_JSON_MAX_CH
     text = json.dumps(compact_value_for_llm(value), ensure_ascii=False)
     if len(text) <= max_chars:
         return text
-    return text[:max_chars].rstrip() + "\n...[统计 JSON 过长，已截断]"
+    return text[:max_chars].rstrip() + "\n...[statistics JSON truncated]"
 
 
 def questionnaire_for_llm(questionnaire_items: list[dict[str, Any]]) -> str:
@@ -794,7 +793,7 @@ def build_direct_analysis_prompt(
     analysis_json = json_for_llm(code_analysis)
 
     return f"""
-You are a user research data analyst。请根据Coding statistics，写一份中文questionnaire数据Analyze报告。
+You are a user research data analyst. Write an English questionnaire data analysis report based on the coding statistics.
 
 Product / competitor direction:
 {product_description}
@@ -806,13 +805,13 @@ Coding statistics:
 {analysis_json}
 
 Report requirements:
-- Write the Markdown output in English。
-- 先note样本规模和模拟数据属性。
-- Analyze受访者画像分布。
-- AnalyzeEach关键维度的结论：工具使用、功能优先级、痛点、价格敏感度、替换意愿、安全/部署/隐私、购买决策。
-- 标出最强信号、分歧点、潜在机会点、risk点。
-- 给出产品定位、定价/套餐、功能优先级、销售/获客、后续真实调研的suggestion。
-- Do not夸大样本；If样本是模拟数据，要明确提示不能直接代表真实市场。
+- Write the Markdown output in English only.
+- Start with sample size and simulated-data caveats.
+- Analyze respondent profile distribution.
+- Analyze key dimensions: tool usage, feature priorities, pain points, price sensitivity, switching intent, security/deployment/privacy, and purchase decisions.
+- Identify the strongest signals, disagreements, opportunities, and risks.
+- Provide recommendations for positioning, pricing/packages, feature priority, sales/acquisition, and follow-up real-user research.
+- Do not overstate the sample. If the data is simulated, clearly state that it cannot directly represent the real market.
 """.strip()
 
 
@@ -828,8 +827,8 @@ def summarize_response_chunk_with_llm(
 ) -> str:
     chunk_analysis = build_code_analysis(questionnaire_items, chunk)
     prompt = f"""
-You are a user research data analyst。下面是第 {chunk_index + 1}/{total_chunks} 批questionnaire答卷的Coding statistics，每批最多 {QUESTIONNAIRE_ANALYSIS_BATCH_SIZE} 份。
-Please output这一批的中文 Markdown 小结，Do not写最终总报告。
+You are a user research data analyst. Below are coding statistics for questionnaire response batch {chunk_index + 1}/{total_chunks}, with up to {QUESTIONNAIRE_ANALYSIS_BATCH_SIZE} responses per batch.
+Output an English Markdown batch summary only. Do not write the final report.
 
 Product / competitor direction:
 {product_description}
@@ -837,15 +836,15 @@ Product / competitor direction:
 Questionnaire items:
 {questionnaire_for_llm(questionnaire_items)}
 
-本批Coding statistics:
+Batch coding statistics:
 {json_for_llm(chunk_analysis)}
 
-小结要求:
-- 只基于本批统计，不编造数据。
-- note本批样本数、受访者画像、主要高频答案。
-- 特别概括开放题长文本中反复出现的主题，Do not逐条复述长答案。
-- 标出本批最强信号、分歧点、机会点和risk点。
-- 输出尽量精炼，作为上一层汇总的输入。
+Summary requirements:
+- Use only this batch's statistics. Do not invent data.
+- Note sample size, respondent profiles, and main high-frequency answers.
+- Summarize recurring themes in open-text answers without repeating long answers one by one.
+- Identify the strongest signals, disagreements, opportunities, and risks in this batch.
+- Keep it concise as input for a higher-level summary.
 """.strip()
 
     return chat_content(
@@ -853,7 +852,7 @@ Questionnaire items:
         base_url=base_url,
         model=model,
         messages=[
-            {"role": "system", "content": "你根据一批questionnaire统计结果写中文user研究批次小结。"},
+            {"role": "system", "content": english_system_prompt("Write English user-research batch summaries from questionnaire statistics.")},
             {"role": "user", "content": prompt},
         ],
         temperature=0.2,
@@ -909,20 +908,20 @@ def merge_summary_group_with_llm(
 ) -> str:
     summary_text = "\n\n".join(summaries)
     prompt = f"""
-You are a user research data analyst。下面是questionnaire分块摘要的第 {level} 层输入，当前为第 {group_index + 1}/{total_groups} 组。
-Please merge这些摘要继续合并成更高一层中文 Markdown 摘要，Do not写最终总报告。
+You are a user research data analyst. Below is level {level} input from questionnaire chunk summaries, group {group_index + 1}/{total_groups}.
+Merge these summaries into a higher-level English Markdown summary. Do not write the final report.
 
 Product / competitor direction:
 {product_description}
 
-待合并摘要:
+Summaries to merge:
 {summary_text}
 
-合并要求:
-- 保留跨批次反复出现的强信号。
-- 保留明显分歧、少数但重要的risk和机会。
-- Do not编造摘要中没有的数据。
-- 输出精炼，适合作为下一层汇总输入。
+Merge requirements:
+- Preserve strong signals that recur across batches.
+- Preserve clear disagreements and minority but important risks and opportunities.
+- Do not invent data that is not present in the summaries.
+- Keep the output concise for the next summarization layer.
 """.strip()
 
     return chat_content(
@@ -930,7 +929,7 @@ Product / competitor direction:
         base_url=base_url,
         model=model,
         messages=[
-            {"role": "system", "content": "你合并多批questionnaire小结，产出更高层user研究摘要。"},
+            {"role": "system", "content": english_system_prompt("Merge questionnaire batch summaries into higher-level English user-research summaries.")},
             {"role": "user", "content": prompt},
         ],
         temperature=0.2,
@@ -947,7 +946,7 @@ def reduce_summaries_stepwise_with_llm(
     summaries: list[str],
 ) -> str:
     current = [
-        f"### 批次 {index + 1}\n{summary.strip()}"
+        f"### Batch {index + 1}\n{summary.strip()}"
         for index, summary in enumerate(summaries)
         if summary.strip()
     ]
@@ -974,7 +973,7 @@ def reduce_summaries_stepwise_with_llm(
             for future in as_completed(futures):
                 merged[futures[future]] = future.result().strip()
         current = [
-            f"### 第 {level + 1} 层摘要 {index + 1}\n{summary}"
+            f"### Level {level + 1} Summary {index + 1}\n{summary}"
             for index, summary in enumerate(merged)
             if summary
         ]
@@ -989,7 +988,7 @@ def build_chunked_analysis_prompt(
     rollup_summary: str,
 ) -> str:
     return f"""
-You are a user research data analyst。请根据全局Coding statistics和分块上递摘要，写一份中文questionnaire数据Analyze报告。
+You are a user research data analyst. Write an English questionnaire data analysis report based on global coding statistics and rolled-up chunk summaries.
 
 Product / competitor direction:
 {product_description}
@@ -997,21 +996,21 @@ Product / competitor direction:
 Questionnaire items:
 {questionnaire_for_llm(questionnaire_items)}
 
-全局Coding statistics（长文本已压缩，主要用于校准样本量、频数和数值结果）:
+Global coding statistics (long text compressed; use mainly for sample size, frequencies, and numeric calibration):
 {json_for_llm(code_analysis)}
 
-分块上递摘要（每 50 份答卷先统计和总结，再逐层合并）:
+Rolled-up chunk summaries:
 {rollup_summary}
 
 Report requirements:
-- Write the Markdown output in English。
-- 先note样本规模和模拟数据属性。
-- Analyze受访者画像分布。
-- AnalyzeEach关键维度的结论：工具使用、功能优先级、痛点、价格敏感度、替换意愿、安全/部署/隐私、购买决策。
-- 标出最强信号、分歧点、潜在机会点、risk点。
-- 给出产品定位、定价/套餐、功能优先级、销售/获客、后续真实调研的suggestion。
-- 开放题长文本结论优先依据分块上递摘要归纳，Do not逐条复述原始长答案。
-- Do not夸大样本；If样本是模拟数据，要明确提示不能直接代表真实市场。
+- Write the Markdown output in English only.
+- Start with sample size and simulated-data caveats.
+- Analyze respondent profile distribution.
+- Analyze key dimensions: tool usage, feature priorities, pain points, price sensitivity, switching intent, security/deployment/privacy, and purchase decisions.
+- Identify the strongest signals, disagreements, opportunities, and risks.
+- Provide recommendations for positioning, pricing/packages, feature priority, sales/acquisition, and follow-up real-user research.
+- For open-text conclusions, rely primarily on rolled-up chunk summaries. Do not repeat raw long answers one by one.
+- Do not overstate the sample. If the data is simulated, clearly state that it cannot directly represent the real market.
 """.strip()
 
 
@@ -1055,7 +1054,7 @@ def analyze_survey_with_llm(
         base_url=base_url,
         model=model,
         messages=[
-            {"role": "system", "content": "你根据questionnaire统计结果写中文user研究Analyze报告。"},
+            {"role": "system", "content": english_system_prompt("Write English user-research analysis reports from questionnaire statistics.")},
             {"role": "user", "content": prompt},
         ],
         temperature=0.2,
@@ -1072,7 +1071,7 @@ def write_analysis_markdown(
     path = output_base_path(product_description, "analysis.md")
     output = "\n\n".join(
         [
-            "# questionnaire数据Analyze报告",
+            "# Questionnaire Data Analysis Report",
             "",
             analysis_markdown,
             "",
@@ -1102,12 +1101,12 @@ def analyze_response_files(
 def main() -> None:
     api_key, _, _ = active_llm_config()
     if not api_key:
-        raise RuntimeError("请先设置当前 LLM_PROVIDER 对应的 API key，例如 LLM0_API_KEY/ARK_API_KEY、LLM1_API_KEY 或 LLM2_API_KEY。")
+        raise RuntimeError("Set the API key for the active LLM_PROVIDER, such as LLM0_API_KEY/ARK_API_KEY, LLM1_API_KEY, or LLM2_API_KEY.")
 
     if ANALYZE_ONLY:
         paths = [part.strip().strip('"') for part in re.split(r"[,;，；]", ANALYZE_ONLY) if part.strip()]
         if len(paths) < 2:
-            raise RuntimeError("ANALYZE_ONLY 需要两个路径：questionnairejsonl,回答jsonl")
+            raise RuntimeError("ANALYZE_ONLY requires two paths: questionnaire_jsonl,response_jsonl")
         product_description = read_product_description()
         questionnaire_path = Path(paths[0])
         responses_path = Path(paths[1])
@@ -1115,39 +1114,39 @@ def main() -> None:
             questionnaire_path = ROOT / questionnaire_path
         if not responses_path.is_absolute():
             responses_path = ROOT / responses_path
-        print("\n===== Analyze已有questionnaire数据 =====")
+        print("\n===== Analyze existing questionnaire data =====")
         analysis_path = analyze_response_files(questionnaire_path, responses_path, product_description)
-        print(f"已GeneratequestionnaireAnalyze报告: {analysis_path}")
+        print(f"Questionnaire analysis report generated: {analysis_path}")
         return
 
     if SearchSource(SEARCH_SOURCE) == SearchSource.BOCHA and not BOCHA_API_KEY:
-        raise RuntimeError("当前 SEARCH_SOURCE=bocha，请先设置 BOCHA_API_KEY。")
+        raise RuntimeError("SEARCH_SOURCE=bocha requires BOCHA_API_KEY.")
     if SearchSource(SEARCH_SOURCE) == SearchSource.GOOGLE and (not GOOGLE_API_KEY or not GOOGLE_CX_ID):
-        raise RuntimeError("当前 SEARCH_SOURCE=google，请先设置 GOOGLE_API_KEY 和 GOOGLE_CX_ID。")
+        raise RuntimeError("SEARCH_SOURCE=google requires GOOGLE_API_KEY and GOOGLE_CX_ID.")
 
     product_description = read_product_description()
     if not product_description:
-        raise RuntimeError("Product / competitor direction不能为空。")
+        raise RuntimeError("Product / competitor direction cannot be empty.")
 
     own_param_path, own_param_text = read_optional_text_file()
     if own_param_path:
-        print(f"[params] 已读取自己产品parameters: {own_param_path}")
+        print(f"[params] Loaded own-product parameters: {own_param_path}")
 
-    print("\n===== 搜索相关产品/competitor =====")
+    print("\n===== Search related products/competitors =====")
     result = find_competitors(product_description)
 
-    print("\n===== LLM 改写后的搜索词 =====")
+    print("\n===== LLM-rewritten search queries =====")
     for query in result.queries:
         print(f"- {query}")
 
-    print("\n===== 抽取到的相关产品 =====")
+    print("\n===== Extracted related products =====")
     if result.product_names:
         for index, name in enumerate(result.product_names[:COMPETITOR_LIMIT], 1):
             print(f"{index}. {name}")
     else:
-        print("未抽取到明确产品名，将仅根据搜索结果Generatequestionnaire。")
+        print("No explicit product names were extracted. The questionnaire will be generated from search results only.")
 
-    print("\n===== Generate调查questionnaire JSONL =====")
+    print("\n===== Generate survey questionnaire JSONL =====")
     items = generate_questionnaire(
         product_description=product_description,
         own_param_text=own_param_text,
@@ -1155,12 +1154,12 @@ def main() -> None:
         search_results=result.search_results,
     )
     if not items:
-        raise RuntimeError("模型没有Generate有效Questionnaire items。")
+        raise RuntimeError("The model did not generate valid questionnaire items.")
 
     output_path = write_jsonl(items, product_description)
-    print(f"已Generate {len(items)} 个题目: {output_path}")
+    print(f"Generated {len(items)} questions: {output_path}")
 
-    print(f"\n===== 调用豆包模拟填写 {SIMULATED_RESPONSE_COUNT} 份questionnaire =====")
+    print(f"\n===== Simulate {SIMULATED_RESPONSE_COUNT} questionnaire responses =====")
     responses = simulate_responses(
         product_description=product_description,
         own_param_text=own_param_text,
@@ -1170,14 +1169,14 @@ def main() -> None:
     )
     response_jsonl_path = write_response_jsonl(responses, product_description)
     response_csv_path = write_response_csv(responses, items, product_description)
-    print(f"已Generate {len(responses)} 份模拟填写 JSONL: {response_jsonl_path}")
-    print(f"已Generate {len(responses)} 份模拟填写 CSV: {response_csv_path}")
+    print(f"Generated {len(responses)} simulated responses JSONL: {response_jsonl_path}")
+    print(f"Generated {len(responses)} simulated responses CSV: {response_csv_path}")
 
-    print("\n===== Analyzequestionnaire数据 =====")
+    print("\n===== Analyze questionnaire data =====")
     code_analysis = build_code_analysis(items, responses)
     analysis_markdown = analyze_survey_with_llm(product_description, items, responses, code_analysis)
     analysis_path = write_analysis_markdown(analysis_markdown, product_description, code_analysis)
-    print(f"已GeneratequestionnaireAnalyze报告: {analysis_path}")
+    print(f"Questionnaire analysis report generated: {analysis_path}")
 
 
 if __name__ == "__main__":

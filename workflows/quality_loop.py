@@ -55,7 +55,7 @@ def run_quality_loop(
         target_domain=target_domain.strip() or product_description.strip(),
         analysis_goal=(
             analysis_goal.strip()
-            or f"基于搜索结果，为 {product_description.strip()} 生成竞品分析报告"
+            or f"Generate a competitor analysis report for {product_description.strip()} based on search results"
         ),
         max_iterations=max(1, max_iterations),
     )

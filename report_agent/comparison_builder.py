@@ -31,7 +31,7 @@ except ImportError:
     from report_agent.table_gap_search import enrich_tables_with_gap_search
 
 
-PENDING_SEARCH = "待搜索"
+PENDING_SEARCH = "Pending search"
 
 
 def build_comparisons(
@@ -151,7 +151,7 @@ def _comparisons_from_llm(
 
     data = call_json_llm(
         config=config,
-        system_prompt="你是产品competitorcross-product comparison专家，只Output JSON。",
+        system_prompt="You are a product competitor comparison expert. Output strict JSON only.",
         user_prompt=f"""
 Analyze领域:
 {target_domain}
@@ -165,35 +165,35 @@ Evidence Cards:
 PM Insights:
 {json.dumps([insight.to_dict() for insight in pm_insights], ensure_ascii=False, indent=2)}
 
-Please outputcompetitor画像和你认为最适合 PM 决策的对比表。table数量、表名和列名由你根据原文决定，Do not被固定模板限制。
+Output competitor profiles and the comparison tables that best support PM decisions. Decide table count, table names, and column names from the source material. Do not be constrained by a fixed template.
 
-- All判断Must由 evidence_ids 支撑；没有evidence时写“待搜索”，Do not猜测。
-- 每张对比表Must为Each候选competitor各输出一行；不能返回空 rows，不能只返回表头。
-- 先从 Evidence Cards 的 claim/raw_excerpt 填入已有事实；只有原文完全没有该字段evidence时才写“待搜索”。
-- tableMust服务 PM 决策，优先围绕目标user、核心场景、产品形态/入口、定价/商业化、Agent 能力、集成生态、安全合规、限制risk、user反馈等从原文真实出现的信息组织。
-- If Evidence Cards 中包含我方产品parameters词库或已知产品parameters词库，Please merge它理解为user自己的产品/我方产品基准parameters，不是competitorparameters；把这些parameters点优先转化为cross-product comparison维度，例如定价/套餐、部署方式、平台支持、核心功能、目标user、限制、安全合规、集成生态、售后服务等。
-- If Evidence Cards 中包含questionnaireAnalyze，请用它校准对比维度的权重：user高频场景、价格敏感度、替换意愿、采购顾虑和risk偏好应影响战略判断，但不能被写成某个competitor的官方事实。
+- Every judgement must be supported by evidence_ids. Write "Pending search" when evidence is missing; do not guess.
+- Every comparison table must output one row for each candidate competitor. Do not return empty rows or header-only tables.
+- First fill facts from Evidence Cards claim/raw_excerpt. Write "Pending search" only when the source material has no evidence for that competitor and field.
+- Tables must support PM decisions and should prioritize target users, core scenarios, product form/entry point, pricing/commercial model, agent capability, integration ecosystem, security/compliance, limitations/risks, and user feedback that actually appear in the source material.
+- If Evidence Cards include own-product parameter vocabulary or known product parameter vocabulary, treat those as the user's own-product baseline, not competitor parameters. Convert those parameters into comparison dimensions such as pricing/plans, deployment mode, platform support, core features, target users, limitations, security/compliance, integration ecosystem, and support.
+- If Evidence Cards include questionnaire analysis, use it to calibrate dimension weighting: high-frequency user scenarios, price sensitivity, switching intent, purchase concerns, and risk preference can influence strategic assessment, but must not be written as official competitor facts.
 
 返回严格 JSON:
 {{
   "competitor_profiles": [
     {{
-      "competitor": "competitor名",
-      "target_user": "目标user",
-      "core_scenario": "核心场景",
-      "product_form": "产品形态",
-      "main_entry": "主要入口",
-      "business_model": "商业模式",
-      "strategic_judgement": "战略判断",
+      "competitor": "Competitor name",
+      "target_user": "Target users",
+      "core_scenario": "Core scenarios",
+      "product_form": "Product form",
+      "main_entry": "Main entry point",
+      "business_model": "Business model",
+      "strategic_judgement": "Strategic assessment",
       "evidence_ids": ["ev_001"]
     }}
   ],
   "comparison_tables": [
     {{
-      "table_name": "中文表名",
-      "columns": ["competitor", "维度1", "维度2", "evidenceID"],
+      "table_name": "English table name",
+      "columns": ["competitor", "Dimension 1", "Dimension 2", "evidenceID"],
       "rows": [
-        {{"competitor": "competitor名", "维度1": "产品级摘要或待搜索", "evidenceID": ["ev_001"]}}
+        {{"competitor": "Competitor name", "Dimension 1": "Product-level summary or Pending search", "evidenceID": ["ev_001"]}}
       ]
     }}
   ]
@@ -250,8 +250,8 @@ PM 洞察:
 - Do not把安装教程、shell 命令、Dockerfile/build 脚本、原始配置、代码片段、插件安装步骤、开发流程模板、OpenSpec/brainstorming/write-plan 模板规划进table。
 - If原文只是教程步骤，但可抽象为产品级能力，只规划抽象能力，例如“任务规划流程支持”“多模型接入”“本地部署”；Do not规划教程步骤本身。
 - tableMust服务 PM 决策，优先选择定位、目标user、核心场景、产品形态、商业化、部署/安全、集成生态、Agent 能力、user旅程。
-- table_name 用中文，表头由你根据evidence内容自由规划；Do not创造无关表。
-- If某个 PM 重要字段原文没有evidence，也可以规划该列并标注需要待搜索，方便后续检索补全。
+- Use English table names and English column headers based on the evidence content. Do not create unrelated tables.
+- If an important PM field has no source evidence, you may plan that column and mark it as needing pending search for later enrichment.
 - Each planned row/dimension 尽量列出 usable_evidence_ids；If该维度对 PM 决策关键但当前原文缺evidence，可写空数组并给出 search_intent。
 
 返回严格 JSON:
@@ -259,15 +259,15 @@ PM 洞察:
   "competitor_profile_fields": ["competitor", "target_user", "core_scenario", "product_form", "main_entry", "business_model", "strategic_judgement", "evidence_ids"],
   "tables": [
     {{
-      "table_name": "Agent 能力与落地能力对比",
-      "purpose": "为什么这张表值得Generate",
-      "columns": ["competitor", "任务规划", "工具调用/集成", "安全与控制", "evidenceID"],
+      "table_name": "Agent Capability and Deployment Comparison",
+      "purpose": "Why this table is worth generating",
+      "columns": ["competitor", "Task Planning", "Tool Calling and Integration", "Security and Control", "evidenceID"],
       "dimensions": [
         {{
-          "dimension": "任务规划",
-          "definition": "产品级判断口径",
+          "dimension": "Task Planning",
+          "definition": "Product-level assessment criteria",
           "usable_evidence_ids": ["ev_001"],
-          "search_intent": "缺evidence时应搜索什么"
+          "search_intent": "What to search when evidence is missing"
         }}
       ]
     }}
@@ -315,9 +315,9 @@ PM 洞察:
 - 只能使用规划中的 table_name、columns、字段、dimension。
 - Each结论Must绑定 evidence_ids，且 evidence_ids Must来自输入。
 - 单元格Must是产品级摘要，不得复制长原文，不得写教程步骤、命令、代码、配置片段。
-- 没有evidence的单元格写“待搜索（方向：...；关键词：...）”，关键词要包含competitor名和待补字段，方便后续审表模型检索。
-- 单元格不超过 80 个中文字符。
-- table字段优先用中文；evidence列可用 evidence_ids 或 evidenceID。
+- For cells without evidence, write "Pending search (direction: ...; keywords: ...)" with keywords containing the competitor name and missing field.
+- Keep each cell concise, no more than 80 English words.
+- Use English table fields. The evidence column can use evidence_ids or Evidence ID.
 - 每张对比表Must为Each候选competitor各输出一行；不能返回空 rows，不能只返回表头。
 - 先尽最大努力从 Evidence Cards 的 claim/raw_excerpt 中提取已有事实填入单元格；只有该competitor该字段在原文完全没有evidence时，才写“待搜索”。
 
@@ -325,22 +325,22 @@ PM 洞察:
 {{
   "competitor_profiles": [
     {{
-      "competitor": "competitor名",
-      "target_user": "目标user",
-      "core_scenario": "核心场景",
-      "product_form": "产品形态",
-      "main_entry": "主要入口",
-      "business_model": "商业模式",
-      "strategic_judgement": "战略判断",
+      "competitor": "Competitor name",
+      "target_user": "Target users",
+      "core_scenario": "Core scenarios",
+      "product_form": "Product form",
+      "main_entry": "Main entry point",
+      "business_model": "Business model",
+      "strategic_judgement": "Strategic assessment",
       "evidence_ids": ["ev_001"]
     }}
   ],
   "comparison_tables": [
     {{
-      "table_name": "中文表名",
-      "columns": ["competitor", "字段1", "字段2", "evidenceID"],
+      "table_name": "English table name",
+      "columns": ["competitor", "Field 1", "Field 2", "evidenceID"],
       "rows": [
-        {{"competitor": "competitor名", "字段1": "从原文提取的产品级摘要或待搜索", "evidence_ids": ["ev_001"]}}
+        {{"competitor": "Competitor name", "Field 1": "Product-level summary from source evidence or Pending search", "evidence_ids": ["ev_001"]}}
       ]
     }}
   ]
@@ -863,13 +863,13 @@ def _normalize_scorecard_row(
     reason = _clean_table_text(row.get("reason") or row.get("理由"), 180)
     evidence_ids = _evidence_ids(row)
     if is_low_value_evidence_text(reason, reason) or _is_table_placeholder(reason):
-        reason = "未找到明确产品级evidence"
+        reason = "No explicit product-level evidence found"
         evidence_ids = []
         scores = {
-            competitor: "待搜索"
+            competitor: PENDING_SEARCH
             for competitor in competitors
             if competitor in scores or scores
-        } or {competitor: "待搜索" for competitor in competitors}
+        } or {competitor: PENDING_SEARCH for competitor in competitors}
     if not scores and not reason:
         return {}
     return {
@@ -879,7 +879,7 @@ def _normalize_scorecard_row(
             80,
         ),
         "scores": scores,
-        "reason": reason or "未找到明确产品级evidence",
+        "reason": reason or "No explicit product-level evidence found",
         "evidence_ids": evidence_ids,
     }
 
@@ -889,7 +889,7 @@ def _normalize_journey_row(row: Dict[str, Any]) -> Dict[str, Any]:
         row.get("competitor_experience") or row.get("competitor体验"), 180
     )
     if is_low_value_evidence_text(competitor_experience, competitor_experience):
-        competitor_experience = "未找到明确产品级evidence"
+        competitor_experience = "No explicit product-level evidence found"
     return {
         **row,
         "stage": _clean_table_text(
@@ -897,12 +897,12 @@ def _normalize_journey_row(row: Dict[str, Any]) -> Dict[str, Any]:
             80,
         ),
         "user_goal": _clean_table_text(
-            row.get("user_goal") or row.get("user目标") or "未找到明确evidence",
+            row.get("user_goal") or row.get("user目标") or "No explicit evidence found",
             140,
         ),
         "competitor_experience": competitor_experience,
         "opportunity": _clean_table_text(
-            row.get("opportunity") or row.get("机会点") or "未找到明确evidence",
+            row.get("opportunity") or row.get("机会点") or "No explicit evidence found",
             160,
         ),
         "evidence_ids": _evidence_ids(row),
@@ -931,7 +931,7 @@ def _clean_table_text(value: Any, max_chars: int) -> str:
         return ""
     text = re.sub(r"\s+", " ", text).strip()
     if is_low_value_evidence_text(text, text) or _is_table_placeholder(text):
-        return "未找到明确产品级evidence"
+        return "No explicit product-level evidence found"
     if max_chars > 0 and len(text) > max_chars:
         text = text[:max_chars].rstrip()
     return text
@@ -940,7 +940,7 @@ def _clean_table_text(value: Any, max_chars: int) -> str:
 def _clean_positioning_field(field: str, value: Any, max_chars: int) -> str:
     text = _clean_table_text(value, max_chars)
     if _positioning_field_mismatch(field, text):
-        return "未找到明确产品级evidence"
+        return "No explicit product-level evidence found"
     return text
 
 
@@ -1343,15 +1343,15 @@ def _strategic_judgement(cards: List[EvidenceCard]) -> str:
         return _field_from_dimensions(
             cards,
             ["trust_and_control", "integration"],
-            "未找到明确产品级evidence",
+            "No explicit product-level evidence found",
         )
     if "agent_capability" in dimensions or "task_completion" in dimensions:
         return _field_from_dimensions(
             cards,
             ["agent_capability", "task_completion"],
-            "未找到明确产品级evidence",
+            "No explicit product-level evidence found",
         )
-    return "未找到明确产品级evidence"
+    return "No explicit product-level evidence found"
 
 
 def _field_from_dimensions(
@@ -1376,21 +1376,21 @@ def _score_competitor_dimension(
         and card.competitor == competitor
     ]
     if not cards:
-        return "待搜索"
+        return PENDING_SEARCH
     avg_confidence = sum(card.confidence for card in cards) / len(cards)
     return max(1, min(5, int(round(2 + avg_confidence * 2.5))))
 
 
 def _score_reason(label: str, cards: List[EvidenceCard]) -> str:
     if not cards:
-        return "未找到明确产品级evidence"
+        return "No explicit product-level evidence found"
     selected = max(cards, key=lambda card: card.confidence)
     return clean_text(selected.claim, 160)
 
 
 def _journey_summary(cards: List[EvidenceCard]) -> str:
     if not cards:
-        return "现有资料未提供明确描述。"
+        return "Current sources do not provide an explicit description."
     return clean_text(cards[0].claim, 160)
 
 

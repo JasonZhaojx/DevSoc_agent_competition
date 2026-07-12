@@ -25,8 +25,8 @@ except ImportError:
     from report_agent.table_workspace import apply_cell_updates, pending_cell_payload
 
 
-PENDING_SEARCH = "待搜索"
-NO_PRODUCT_EVIDENCE = "未找到明确产品级evidence"
+PENDING_SEARCH = "Pending search"
+NO_PRODUCT_EVIDENCE = "No explicit product-level evidence found"
 
 
 @dataclass
@@ -762,49 +762,49 @@ def _audit_table_gaps_with_llm(
     max_queries = _gap_query_budget(config, len(gaps))
     data = call_json_llm(
         config=config,
-        system_prompt="你是competitortableQA与检索规划专家，只Output JSON。",
+        system_prompt="You are a competitor table QA and search-planning expert. Output strict JSON only.",
         user_prompt=f"""
-目标领域:
+Target domain:
 {target_domain}
 
-候选competitor:
+Candidate competitors:
 {json.dumps(list(competitors), ensure_ascii=False)}
 
-当前competitor画像:
+Current competitor profiles:
 {json.dumps(profiles, ensure_ascii=False, indent=2)}
 
-当前对比表:
+Current comparison tables:
 {json.dumps(tables, ensure_ascii=False, indent=2)}
 
-程序已发现的待搜索gap:
+Pending-search gaps detected by the program:
 {json.dumps([gap.to_dict() for gap in gaps], ensure_ascii=False, indent=2)}
 
 Evidence 摘要:
 {json.dumps(_evidence_summary(evidence_cards), ensure_ascii=False, indent=2)}
 
-请审计整张表，提取需要重新搜索/回填的位置。你需要发现:
-- 单元格为空、待搜索、未找到明确evidence。
-- 单元格错栏，例如“产品定位”写到目标user，“特色功能集”写到核心场景，“代码示例/快捷键/教程”写到主要入口。
-- agent_capability_scorecard 的 reason 过长、只引用某一个competitor却代表整行、或包含教程/代码片段。
-- scores 有分数但对应 reason/evidence 不足，应该搜索对应competitor和维度。
-- Do not为“关联evidenceID、ev_001 校验、回填修正、剔除无关片段”Generate公网搜索词；这类是内部清洗/自检任务，不是外部事实gap。
+Audit the whole table and extract positions that need search or backfill. Detect:
+- Empty cells, "Pending search" cells, and cells with no explicit evidence.
+- Misplaced cells, such as positioning content in target users, feature sets in core scenarios, or code examples/tutorials in entry-point fields.
+- agent_capability_scorecard reasons that are too long, cite one competitor while representing the whole row, or contain tutorials/code snippets.
+- Scores that have numeric values but insufficient reason/evidence and should trigger a search for the competitor and dimension.
+- Do not generate public web search queries for internal cleanup tasks such as evidence ID validation, ev_001 checking, backfill correction, or irrelevant-fragment removal.
 
-返回最多 {max_queries} 个搜索任务，但 gaps 可以多于搜索任务，多个 gap 可共用 query。
-table_name Must取自当前对比表里的原始 table_name；competitor画像使用 competitor_profiles。
-field Must是当前行里真实存在的字段名，可以是中文表头；Do not凭空发明 pending_search_query 这类内部字段。
-row_index 使用当前表 rows/dimensions 的 0 基下标。自由table也要审计，Do not只看固定三张表。
+Return at most {max_queries} search tasks. There may be more gaps than search tasks, and multiple gaps can share one query.
+table_name must come from the original table_name in the current comparison tables; use competitor_profiles for profile gaps.
+field must be a real field name in the current row. Do not invent internal fields such as pending_search_query.
+row_index is zero-based within the current table rows/dimensions. Audit free-form tables too; do not only inspect fixed tables.
 
-返回严格 JSON:
+Return strict JSON:
 {{
   "gaps": [
     {{
       "gap_id": "gap_a001",
-      "table_name": "产品形态与入口对比",
+      "table_name": "Product Form and Entry Point Comparison",
       "row_index": 0,
       "competitor": "OpenCode",
       "dimension": "",
-      "field": "主要入口",
-      "reason": "主要入口里混入代码示例和快捷键教程"
+      "field": "Main Entry Point",
+      "reason": "The entry-point cell mixes in code examples and shortcut tutorials"
     }}
   ],
   "queries": [
@@ -1054,31 +1054,31 @@ def _plan_gap_search_queries(
 
     data = call_json_llm(
         config=config,
-        system_prompt="你是competitortablegap搜索词规划器，只Output JSON。",
+        system_prompt="You are a competitor table-gap search query planner. Output strict JSON only.",
         user_prompt=f"""
-目标领域:
+Target domain:
 {target_domain}
 
-候选competitor:
+Candidate competitors:
 {json.dumps(list(competitors), ensure_ascii=False)}
 
-已有table，待搜索位置已标为“待搜索”:
+Existing tables, with missing positions marked as "Pending search":
 {json.dumps({"competitor_profiles": profiles, "comparison_tables": tables}, ensure_ascii=False, indent=2)}
 
 gap列表:
 {json.dumps([gap.to_dict() for gap in gaps], ensure_ascii=False, indent=2)}
 
-已有 EvidenceCard 摘要:
+Existing EvidenceCard summary:
 {json.dumps(_evidence_summary(evidence_cards), ensure_ascii=False, indent=2)}
 
-请为最关键的gapGenerate最多 {max_queries} 个搜索关键词。要求:
-- 关键词要能搜到产品级事实，优先官方文档、定价页、发布note、可信评测。
-- Do not搜安装命令、Dockerfile、脚本、模板、OpenSpec、brainstorm、write-plan。
-- Do notGenerate“关联evidenceID、evidence校验、ev_001、回填校验、剔除无关片段”这类内部处理查询；这类issue应通过已有 evidence_ids 自检，不走公网搜索。
-- 每条 query 尽量包含competitor名和需要补的维度/字段。
-- gap_ids 可以覆盖多个gap。
+Generate at most {max_queries} search queries for the most important gaps. Requirements:
+- Queries should find product-level facts, prioritizing official docs, pricing pages, release notes, and credible reviews.
+- Do not search for install commands, Dockerfiles, scripts, templates, OpenSpec, brainstorming, or write-plan material.
+- Do not generate internal-processing queries for evidence ID linkage, evidence validation, ev_001, backfill validation, or irrelevant-fragment removal. Those should be checked against existing evidence_ids, not public web search.
+- Each query should include the competitor name and missing dimension/field when possible.
+- gap_ids may cover multiple gaps.
 
-返回严格 JSON:
+Return strict JSON:
 {{
   "queries": [
     {{"query": "OpenCode AI coding agent features pricing model support", "gap_ids": ["gap_001"]}}
@@ -1376,20 +1376,20 @@ gap对应搜索词:
 搜索结果:
 {json.dumps(search_results, ensure_ascii=False, indent=2)}
 
-请只基于搜索结果回填“待搜索”单元格。要求:
-- 只能回填搜索结果明确支持的产品级事实；不能使用常识猜测。
-- If仍然没有evidence，保持“待搜索”。
-- Do not写安装命令、Dockerfile、脚本、原始配置、代码片段、教程步骤。
-- 保持原有表名、列名和行顺序，Do not把自由table改成固定模板。
-- 自由table的中文字段要原字段回填；Do not新增 pending_search_query 等内部字段。
-- agent_capability_scorecard 的 scores 只能包含候选competitor key，分数 0-5；无evidence保持“待搜索”。
-- 单元格写产品级摘要，每格不超过 80 个中文字符。
-- evidence_ids 使用搜索结果中的 source_id，例如 gap_src_001。
+Fill only "Pending search" cells based on search results. Requirements:
+- Fill only product-level facts explicitly supported by search results; do not guess from general knowledge.
+- If there is still no evidence, keep "Pending search".
+- Do not write install commands, Dockerfiles, scripts, raw configuration, code snippets, or tutorial steps.
+- Preserve existing table names, column names, and row order. Do not convert free-form tables into a fixed template.
+- For free-form tables, fill the original fields as-is. Do not add internal fields such as pending_search_query.
+- For agent_capability_scorecard, scores can only contain candidate competitor keys with 0-5 scores; keep "Pending search" when there is no evidence.
+- Write concise product-level summaries, no more than 80 English words per cell.
+- Use source_id from search results for evidence_ids, such as gap_src_001.
 
 返回严格 JSON:
 {{
   "cell_updates": [
-    {{"cell_id": "xxx", "value": "基于搜索结果的产品级事实", "evidence_ids": ["gap_src_001"]}}
+    {{"cell_id": "xxx", "value": "Product-level fact supported by search results", "evidence_ids": ["gap_src_001"]}}
   ],
   "competitor_profiles": [],
   "comparison_tables": []

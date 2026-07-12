@@ -13,10 +13,10 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Sequence
 
 try:
-    from .llm_utils import clean_text
+    from .llm_utils import clean_text, safe_ascii_filename
     from .models import WritingAgentConfig
 except ImportError:
-    from report_agent.llm_utils import clean_text
+    from report_agent.llm_utils import clean_text, safe_ascii_filename
     from report_agent.models import WritingAgentConfig
 
 
@@ -233,5 +233,4 @@ def _pending_or_blank(value: str) -> bool:
 
 
 def _safe_name(label: str) -> str:
-    text = re.sub(r"\W+", "_", label, flags=re.UNICODE).strip("_")
-    return text[:80] or "comparison_tables"
+    return safe_ascii_filename(label, fallback="comparison_tables", max_chars=80)

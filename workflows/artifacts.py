@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, Sequence
 
 from agent.quality_agent.config import QualityReport
+from report_agent.llm_utils import safe_ascii_filename
 from report_agent.models import ReportPackage
 
 
@@ -111,5 +112,4 @@ def _to_plain(value: Any) -> Any:
 
 
 def _safe_filename(value: str) -> str:
-    safe = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in value)
-    return safe.strip("_") or "workflow_task"
+    return safe_ascii_filename(value, fallback="workflow_task", max_chars=80)

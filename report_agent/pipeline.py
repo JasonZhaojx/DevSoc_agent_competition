@@ -126,7 +126,7 @@ def run_search_and_report(
 
     report_goal = (
         analysis_goal.strip()
-        or f"基于搜索结果，为 {description} GeneratecompetitorAnalyze报告"
+        or f"Generate a competitor analysis report for {description} based on search results"
     )
     report_domain = target_domain.strip() or description
     package = run_writing_agent(

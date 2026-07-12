@@ -7,6 +7,16 @@ JSON 时自动得到 None 并进入本地 fallback，因此 offline 测试不会
 from __future__ import annotations
 
 OUTPUT_LANGUAGE = "English"
+ENGLISH_OUTPUT_POLICY = """
+Output language policy:
+- Write every user-facing field in English only.
+- Do not use Chinese or any other non-English language in reports, summaries,
+  table cells, labels, recommendations, questionnaire items, or file titles.
+- If the input or source material is non-English, translate its meaning into
+  English before returning it.
+- Keep proper nouns and brand names unchanged only when translation would be
+  incorrect.
+""".strip()
 
 import importlib.util
 import json
@@ -37,6 +47,29 @@ def parse_json_payload(content: str) -> Optional[Any]:
 
     if not content:
         return None
+
+
+def contains_cjk(text: Any) -> bool:
+    """Return True when text contains Chinese/Japanese/Korean ideographs."""
+
+    return bool(re.search(r"[\u3400-\u9fff\uf900-\ufaff]", str(text or "")))
+
+
+def english_system_prompt(system_prompt: str) -> str:
+    """Add the project-wide English-only policy to every LLM system prompt."""
+
+    prompt = str(system_prompt or "").strip()
+    if ENGLISH_OUTPUT_POLICY in prompt:
+        return prompt
+    return f"{ENGLISH_OUTPUT_POLICY}\n\n{prompt}".strip()
+
+
+def safe_ascii_filename(value: Any, fallback: str = "report", max_chars: int = 80) -> str:
+    """Build an ASCII-only filename stem from user/model supplied text."""
+
+    text = re.sub(r"[\u3400-\u9fff\uf900-\ufaff]+", "", str(value or ""))
+    text = re.sub(r"[^0-9A-Za-z._-]+", "_", text).strip("._-")
+    return text[:max_chars] or fallback
 
     cleaned = content.strip()
     cleaned = re.sub(r"^```(?:json)?", "", cleaned, flags=re.IGNORECASE).strip()
@@ -112,7 +145,7 @@ def call_json_llm(
             base_url=config.llm_base_url,
             model=config.llm_model,
             messages=[
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": english_system_prompt(system_prompt)},
                 {"role": "user", "content": user_prompt},
             ],
             temperature=config.temperature,
@@ -126,6 +159,51 @@ def call_json_llm(
                 f"[writing-agent] LLM JSON call failed, using fallback: {exc}"
             )
         return None
+
+
+def rewrite_text_to_english(text: str, config: WritingAgentConfig) -> str:
+    """Translate generated user-facing text to English when an LLM is available."""
+
+    original = str(text or "")
+    if not original.strip() or not can_use_llm(config):
+        return original
+
+    try:
+        chat_content = _load_chat_content()
+        content = chat_content(
+            api_key=config.llm_api_key,
+            base_url=config.llm_base_url,
+            model=config.llm_model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": english_system_prompt(
+                        "You rewrite content into English only and preserve Markdown/JSON structure."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        "Rewrite the following content into English only. "
+                        "Preserve headings, bullets, tables, IDs, URLs, and structure. "
+                        "Return only the rewritten content.\n\n"
+                        f"{original}"
+                    ),
+                },
+            ],
+            temperature=0.1,
+            max_tokens=config.max_tokens if config.max_tokens > 0 else None,
+            timeout=config.llm_timeout,
+        )
+        rewritten = str(content or "").replace("```markdown", "").replace("```", "").strip()
+        if rewritten and not contains_cjk(rewritten):
+            return rewritten + ("\n" if original.endswith("\n") else "")
+    except Exception as exc:
+        if config.verbose and config.progress_printer:
+            config.progress_printer(
+                f"[writing-agent] English rewrite failed, keeping original text: {exc}"
+            )
+    return original
 
 
 def clean_text(value: Any, max_chars: int = 0) -> str:
